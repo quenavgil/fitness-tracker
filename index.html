@@ -317,6 +317,7 @@
     aspect-ratio: 1;
     border-radius: 8px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     font-size: 13px;
@@ -345,11 +346,18 @@
   }
 
   .cal-emoji {
-    font-size: 10px;
+    font-size: 16px;
+    line-height: 1;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .cal-day-num {
     position: absolute;
-    bottom: 3px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 3px;
+    right: 5px;
+    font-size: 10px;
+    font-weight: 600;
     line-height: 1;
   }
 
@@ -1285,11 +1293,15 @@ function renderCalendar(entries) {
     const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const el = document.createElement('div');
     el.className = 'cal-day';
-    el.textContent = day;
 
     if (activeDates[dateStr]) {
       el.classList.add('active-day');
-      // pick emoji for first activity
+      // number top-right
+      const numEl = document.createElement('span');
+      numEl.className = 'cal-day-num';
+      numEl.textContent = day;
+      el.appendChild(numEl);
+      // emoji center
       const acts = [...new Set(activeDates[dateStr])];
       const emojiMap = {
         'Run': '🏃', 'Yoga': '🧘', 'Swim': '🏊', 'Walk': '🚶',
@@ -1304,6 +1316,7 @@ function renderCalendar(entries) {
       el.addEventListener('click', () => jumpToDate(dateStr));
     } else {
       el.classList.add('inactive');
+      el.textContent = day;
     }
 
     if (dateStr === todayStr) el.classList.add('today');
