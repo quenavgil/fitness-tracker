@@ -1077,6 +1077,8 @@ async function init() {
   } else {
     weightMap = loadWeightLocal();
   }
+  // clear stale health cache so Supabase always wins
+  localStorage.removeItem('fitness_health_v1');
   // load health from Supabase BEFORE rendering
   try {
     const remoteHealthQ = await sbFetch(HEALTH_TABLE + '?person=eq.quena&order=date.desc&select=*').catch(() => []);
@@ -1213,6 +1215,7 @@ function renderAll() {
     renderCalendar(entries);
     renderHistory(entries);
     if (currentTab === 'weight') renderWeight();
+    if (currentTab === 'steps') renderSteps();
   } catch(e) { console.error('Render error:', e); }
 }
 
