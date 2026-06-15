@@ -811,6 +811,7 @@
   <button class="tab" onclick="switchTab('calendar')">Calendar</button>
   <button class="tab" onclick="switchTab('history')">History</button>
   <button class="tab" onclick="switchTab('weight')">Weight</button>
+  <button class="tab" onclick="switchTab('steps')">Steps</button>
 </div>
 
 <main>
@@ -944,6 +945,20 @@
     <div class="weight-list" id="weightList"></div>
   </div>
 
+  <!-- STEPS TAB -->
+  <div class="tab-content" id="tab-steps">
+    <div class="weight-banner">
+      <div class="weight-current-label">Today's steps</div>
+      <div>
+        <span class="weight-current-val" id="stepsCurrentVal">—</span>
+      </div>
+      <div class="weight-since" id="stepsSince"></div>
+    </div>
+
+    <div class="section-label">Daily History</div>
+    <div class="weight-list" id="stepsList"></div>
+  </div>
+
 </main>
 
 <div class="toast" id="toast"></div>
@@ -954,6 +969,7 @@ const SUPABASE_URL = 'https://zgmxaszvedyieshzmryv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_BXG1JU8IoKFiJdeSfzT2-g_yqjr7lA5';
 const TABLE = 'fitness_logs';
 const WEIGHT_TABLE = 'fitness_weight';
+const HEALTH_TABLE = 'fitness_health';
 
 const PEOPLE = {
   quena: {
@@ -1063,6 +1079,15 @@ async function init() {
   }
   // restore saved unit
   renderAll();
+  // load health from Supabase
+  try {
+    const remoteHealthQ = await loadHealthFromSupabase('quena');
+    const remoteHealthC = await loadHealthFromSupabase('carlos');
+    if (remoteHealthQ.length) healthMap.quena = remoteHealthQ;
+    if (remoteHealthC.length) healthMap.carlos = remoteHealthC;
+    localStorage.setItem('fitness_health_v1', JSON.stringify(healthMap));
+  } catch(e) { console.warn('Health load error:', e); }
+
   } catch(e) { console.error('Init error:', e); renderAll(); }
 }
 
@@ -1371,12 +1396,13 @@ function renderHistory(entries) {
 function switchTab(name) {
   currentTab = name;
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['log','calendar','history','weight'][i] === name);
+    t.classList.toggle('active', ['log','calendar','history','weight','steps'][i] === name);
   });
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'calendar') renderCalendar(entriesMap[currentPerson]);
   if (name === 'weight') renderWeight();
+  if (name === 'steps') renderSteps();
 }
 
 
@@ -1412,8 +1438,30 @@ async function deleteWeightFromSupabase(id) {
   } catch (e) { console.warn('Supabase weight delete failed:', e); return false; }
 }
 
+
+// ── HEALTH SUPABASE ────────────────────────────────────────────────────────────
+async function saveHealthToSupabase(entry) {
+  try {
+    // upsert so running shortcut twice on same day just updates
+    await sbFetch(HEALTH_TABLE + '?on_conflict=person,date', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=representation',
+      body: JSON.stringify(entry)
+    });
+    return true;
+  } catch (e) { console.warn('Supabase health save failed:', e); return false; }
+}
+
+async function loadHealthFromSupabase(person) {
+  try {
+    const data = await sbFetch(HEALTH_TABLE + '?person=eq.' + person + '&order=date.desc&select=*');
+    return data || [];
+  } catch (e) { console.warn('Supabase health load failed:', e); return []; }
+}
+
 // ── WEIGHT STATE ───────────────────────────────────────────────────────────────
-let weightMap = { quena: [], carlos: [] }; // [{ id, date, value }]
+let weightMap = { quena: [], carlos: [] };
+let healthMap = { quena: [], carlos: [] }; // [{ id, date, value }]
 
 function saveWeightLocal() {
   localStorage.setItem('fitness_weight_v1', JSON.stringify(weightMap));
@@ -1517,13 +1565,40 @@ function dismissReminder() {
 
 
 // ── APPLE HEALTH URL PARAMS ────────────────────────────────────────────────────
-function readHealthParams() {
+async function readHealthParams() {
   const params = new URLSearchParams(window.location.search);
   const steps = params.get('steps');
   const minutes = params.get('minutes');
+  const person = params.get('person') || 'quena';
 
   if (steps || minutes) {
-    const card = document.getElementById('healthCard');
+    const today = fmtDate(new Date());
+    const entry = {
+      id: person + '_' + today,
+      person,
+      date: today,
+      steps: parseInt(steps) || 0,
+      minutes: parseInt(minutes) || 0
+    };
+
+    // Save to Supabase
+    if (useSupabase) await saveHealthToSupabase(entry);
+
+    // Save to localStorage
+    const existing = healthMap[person].findIndex(e => e.date === today);
+    if (existing >= 0) healthMap[person][existing] = entry;
+    else healthMap[person].unshift(entry);
+    localStorage.setItem('fitness_health_v1', JSON.stringify(healthMap));
+
+    // Show card
+    showHealthCard(steps, minutes);
+  }
+}
+
+function showHealthCard(steps, minutes) {
+  const card = document.getElementById('healthCard');
+  if (!card) return;
+  if (steps || minutes) {
     card.classList.add('visible');
     if (steps) document.getElementById('healthSteps').textContent = parseInt(steps).toLocaleString();
     if (minutes) document.getElementById('healthMinutes').textContent = parseInt(minutes);
@@ -1531,8 +1606,7 @@ function readHealthParams() {
 }
 
 // ── START ──────────────────────────────────────────────────────────────────────
-readHealthParams();
-init();
+init().then(() => readHealthParams());
 </script>
 </div></body>
 </html>
