@@ -459,6 +459,60 @@
 
 
 
+
+  /* ── HEALTH CARD ── */
+  .health-card {
+    background: var(--surface);
+    border: 1px solid var(--accent-border);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .health-card.visible { display: block; }
+
+  .health-card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .health-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .health-stat {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .health-stat-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    transition: color 0.3s;
+  }
+
+  .health-stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
   /* ── MOOD ── */
   .mood-chips { display: flex; gap: 8px; margin-top: 2px; }
 
@@ -763,6 +817,19 @@
 
   <!-- LOG TAB -->
   <div class="tab-content active" id="tab-log">
+    <div class="health-card" id="healthCard">
+      <div class="health-card-title">❤️ From Apple Health · Today</div>
+      <div class="health-stats">
+        <div class="health-stat">
+          <div class="health-stat-num" id="healthSteps">—</div>
+          <div class="health-stat-label">👟 Steps</div>
+        </div>
+        <div class="health-stat">
+          <div class="health-stat-num" id="healthMinutes">—</div>
+          <div class="health-stat-label">⏱ Active min</div>
+        </div>
+      </div>
+    </div>
     <div class="log-card">
       <div class="log-title" id="logTitle">What did you do today?</div>
 
@@ -1448,7 +1515,23 @@ function dismissReminder() {
   document.getElementById('reminderBanner').style.display = 'none';
 }
 
+
+// ── APPLE HEALTH URL PARAMS ────────────────────────────────────────────────────
+function readHealthParams() {
+  const params = new URLSearchParams(window.location.search);
+  const steps = params.get('steps');
+  const minutes = params.get('minutes');
+
+  if (steps || minutes) {
+    const card = document.getElementById('healthCard');
+    card.classList.add('visible');
+    if (steps) document.getElementById('healthSteps').textContent = parseInt(steps).toLocaleString();
+    if (minutes) document.getElementById('healthMinutes').textContent = parseInt(minutes);
+  }
+}
+
 // ── START ──────────────────────────────────────────────────────────────────────
+readHealthParams();
 init();
 </script>
 </div></body>
