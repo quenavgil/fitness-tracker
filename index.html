@@ -1557,6 +1557,40 @@ function renderWeight() {
   }).join('');
 }
 
+
+// ── RENDER STEPS ───────────────────────────────────────────────────────────────
+function renderSteps() {
+  const entries = (healthMap[currentPerson] || []).slice().sort((a,b) => b.date.localeCompare(a.date));
+  const currentEl = document.getElementById('stepsCurrentVal');
+  const sinceEl   = document.getElementById('stepsSince');
+  const list      = document.getElementById('stepsList');
+  if (!currentEl) return;
+
+  if (!entries.length) {
+    currentEl.textContent = '—';
+    sinceEl.textContent = 'Automation syncs at 11pm daily';
+    list.innerHTML = '<div class="empty-state"><div class="icon">👟</div><p>No step data yet.<br>Automation syncs tonight at 11pm.</p></div>';
+    return;
+  }
+
+  const today = fmtDate(new Date());
+  const todayEntry = entries.find(e => e.date === today);
+  currentEl.textContent = todayEntry ? parseInt(todayEntry.steps).toLocaleString() : '—';
+
+  const avg = Math.round(entries.reduce((s,e) => s + (parseInt(e.steps)||0), 0) / entries.length);
+  sinceEl.innerHTML = `Avg <span>${avg.toLocaleString()}</span> steps/day`;
+
+  list.innerHTML = entries.map(e => `
+    <div class="weight-row">
+      <div class="weight-row-date">${fmtDisplay(e.date)}</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="weight-row-val">👟 ${parseInt(e.steps||0).toLocaleString()}</span>
+        <span style="font-size:13px;color:var(--muted);">⏱ ${e.minutes||0} min</span>
+      </div>
+    </div>
+  `).join('');
+}
+
 function dismissReminder() {
   const key = 'weight_reminder_dismissed_' + fmtDate(new Date());
   localStorage.setItem(key, '1');
