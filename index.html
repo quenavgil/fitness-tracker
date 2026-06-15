@@ -751,7 +751,7 @@
 <!-- HEADER -->
 <header>
   <div class="logo">move<span>.</span></div>
-  <div class="streak">🔥 <span class="streak-num" id="streakNum">0</span> días</div>
+  <div class="streak">🔥 <span class="streak-num" id="streakNum">0</span> days</div>
 </header>
 
 <!-- INNER TABS -->
@@ -975,11 +975,13 @@ function loadLocal() {
 
 // ── INIT ───────────────────────────────────────────────────────────────────────
 async function init() {
+  try {
   const today = new Date();
   calYear = today.getFullYear();
   calMonth = today.getMonth();
   document.getElementById('logDate').value = fmtDate(today);
-  document.getElementById('weightDate').value = fmtDate(today);
+  const wdEl = document.getElementById('weightDate');
+  if (wdEl) wdEl.value = fmtDate(today);
 
   const remote = await loadAllFromSupabase();
   if (remote !== null) {
@@ -1003,8 +1005,9 @@ async function init() {
     weightMap = loadWeightLocal();
   }
   // restore saved unit
-  if (weightUnit === 'kg') { document.getElementById('unitLbs').classList.remove('active'); document.getElementById('unitKg').classList.add('active'); }
+  if (weightUnit === 'kg') { const lb = document.getElementById('unitLbs'); const kg = document.getElementById('unitKg'); if (lb) lb.classList.remove('active'); if (kg) kg.classList.add('active'); }
   renderAll();
+  } catch(e) { console.error('Init error:', e); renderAll(); }
 }
 
 // ── PERSON SWITCH ──────────────────────────────────────────────────────────────
@@ -1020,7 +1023,8 @@ function switchPerson(person) {
   document.querySelectorAll('.mood-chip.selected').forEach(c => c.classList.remove('selected'));
   document.getElementById('logNote').value = '';
   document.getElementById('logDate').value = fmtDate(new Date());
-  if (document.getElementById('weightDate')) document.getElementById('weightDate').value = fmtDate(new Date());
+  const wdEl2 = document.getElementById('weightDate');
+  if (wdEl2) wdEl2.value = fmtDate(new Date());
 
   renderAll();
 }
@@ -1098,7 +1102,8 @@ async function logWorkout() {
   document.querySelectorAll('.mood-chip.selected').forEach(c => c.classList.remove('selected'));
   document.getElementById('logNote').value = '';
   document.getElementById('logDate').value = fmtDate(new Date());
-  if (document.getElementById('weightDate')) document.getElementById('weightDate').value = fmtDate(new Date());
+  const wdEl2 = document.getElementById('weightDate');
+  if (wdEl2) wdEl2.value = fmtDate(new Date());
   btn.disabled = false;
   btn.textContent = 'Save';
 
@@ -1119,12 +1124,14 @@ async function deleteGroup(date) {
 
 // ── RENDER ALL ─────────────────────────────────────────────────────────────────
 function renderAll() {
-  const entries = entriesMap[currentPerson];
-  renderStats(entries);
-  renderStreak(entries);
-  renderCalendar(entries);
-  renderHistory(entries);
-  if (currentTab === 'weight') renderWeight();
+  try {
+    const entries = entriesMap[currentPerson];
+    renderStats(entries);
+    renderStreak(entries);
+    renderCalendar(entries);
+    renderHistory(entries);
+    if (currentTab === 'weight') renderWeight();
+  } catch(e) { console.error('Render error:', e); }
 }
 
 // ── STATS ──────────────────────────────────────────────────────────────────────
