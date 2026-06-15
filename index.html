@@ -1078,8 +1078,7 @@ async function init() {
     weightMap = loadWeightLocal();
   }
   // restore saved unit
-  renderAll();
-  // load health from Supabase
+  // load health from Supabase BEFORE rendering
   try {
     const remoteHealthQ = await loadHealthFromSupabase('quena');
     const remoteHealthC = await loadHealthFromSupabase('carlos');
@@ -1087,6 +1086,7 @@ async function init() {
     if (remoteHealthC.length) healthMap.carlos = remoteHealthC;
     localStorage.setItem('fitness_health_v1', JSON.stringify(healthMap));
   } catch(e) { console.warn('Health load error:', e); }
+  renderAll();
 
   } catch(e) { console.error('Init error:', e); renderAll(); }
 }
