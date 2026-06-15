@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>move. — Fitness Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #13120f;
+    --surface: #1c1b17;
+    --surface2: #252420;
+    --text: #e8e4dc;
+    --muted: #7a7468;
+    --border: #302e28;
+    --red: #c0776a;
+
+    /* per-person accent (overridden by JS) */
+    --accent: #7a94b2;
+    --accent-glow: rgba(122,148,178,0.13);
+    --accent-border: rgba(122,148,178,0.25);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* ── PERSON SWITCHER ── */
+  .person-bar {
+    display: flex;
+    padding: 14px 20px 0;
+    gap: 8px;
+    background: var(--bg);
+  }
+
+  .person-btn {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 12px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .person-btn.active-quena {
+    background: rgba(122,148,178,0.12);
+    border-color: #7a94b2;
+    color: #7a94b2;
+  }
+
+  .person-btn.active-carlos {
+    background: rgba(82,120,95,0.12);
+    border-color: #52785f;
+    color: #52785f;
+  }
+
+  .person-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+
+  .avatar-q { background: rgba(122,148,178,0.2); color: #7a94b2; }
+  .avatar-c { background: rgba(82,120,95,0.2); color: #52785f; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 14px 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .logo span { color: var(--accent); transition: color 0.3s; }
+
+  .streak {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .streak-num {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 15px;
+    transition: color 0.3s;
+  }
+
+  /* ── INNER TABS ── */
+  .tabs {
+    display: flex;
+    padding: 12px 20px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 48px;
+    z-index: 9;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    margin-bottom: -1px;
+  }
+
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    transition: color 0.3s, border-color 0.3s;
+  }
+
+  /* ── MAIN ── */
+  main { padding: 20px 20px; max-width: 520px; margin: 0 auto; }
+
+  /* ── LOG FORM ── */
+  .log-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .log-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+
+  .field-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+
+  .field-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  input[type="date"], textarea {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+  input[type="date"]:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 64px; }
+
+  .activity-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
+
+  .chip {
+    padding: 6px 13px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    transition: all 0.15s;
+    font-family: 'Space Grotesk', sans-serif;
+    user-select: none;
+  }
+
+  .chip.selected {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-log {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #0f1117;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.2s, background 0.3s;
+    margin-top: 4px;
+  }
+
+  .btn-log:hover { opacity: 0.85; }
+  .btn-log:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── STATS ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    transition: color 0.3s;
+  }
+
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ── CALENDAR ── */
+  .calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .cal-month {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .cal-nav {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+
+  .cal-dow {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 4px 0;
+    font-family: 'Space Grotesk', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .cal-day {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'Space Grotesk', sans-serif;
+    position: relative;
+    transition: background 0.15s;
+  }
+
+  .cal-day.empty, .cal-day.inactive { color: var(--muted); }
+
+  .cal-day.active-day {
+    background: var(--accent-glow);
+    color: var(--accent);
+    font-weight: 700;
+    border: 1px solid var(--accent-border);
+  }
+
+  .cal-day.active-day::after {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    position: absolute;
+    bottom: 4px;
+  }
+
+  .cal-day.today { outline: 1.5px solid var(--muted); outline-offset: -1.5px; }
+  .cal-day.active-day.today { outline-color: var(--accent); }
+
+  .cal-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  .cal-day:hover .cal-tooltip { display: block; }
+
+  /* ── HISTORY ── */
+  .section-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .entry-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .entry-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .entry-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: 4px;
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+
+  .entry-info { flex: 1; }
+
+  .entry-date {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+
+  .entry-activities { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .entry-tag {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--accent-glow);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    transition: color 0.3s, background 0.3s;
+  }
+
+  .entry-note { font-size: 13px; color: var(--muted); margin-top: 5px; }
+
+  .entry-delete {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0 4px;
+    border-radius: 6px;
+    transition: color 0.15s;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .entry-delete:hover { color: var(--red); }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+
+  .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+  .empty-state p { font-size: 14px; line-height: 1.5; }
+
+
+
+
+  /* ── MOOD ── */
+  .mood-chips { display: flex; gap: 8px; margin-top: 2px; }
+
+  .mood-chip {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    transition: all 0.15s;
+    font-family: 'Space Grotesk', sans-serif;
+    text-align: center;
+    user-select: none;
+  }
+
+  .mood-chip.selected {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .mood-tag {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ── UNIT TOGGLE ── */
+  .unit-toggle {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .unit-opt {
+    flex: 1;
+    padding: 6px 0;
+    text-align: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 7px;
+    border: none;
+    background: none;
+    transition: all 0.18s;
+  }
+
+  .unit-opt.active {
+    background: var(--surface);
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+  }
+
+  /* ── WEIGHT TAB ── */
+  .weight-banner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .weight-current-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .weight-current-val {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    transition: color 0.3s;
+  }
+
+  .weight-current-unit {
+    font-size: 18px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  .weight-since {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  .weight-since span {
+    color: var(--accent);
+    font-weight: 600;
+    transition: color 0.3s;
+  }
+
+  .weight-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .weight-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .weight-input-row .field-row {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  .weight-input-wrap {
+    position: relative;
+    flex: 1;
+  }
+
+  input[type="number"] {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 10px 44px 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus { border-color: var(--accent); }
+
+  .unit-label {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  .btn-weight {
+    padding: 10px 20px;
+    background: var(--accent);
+    color: #13120f;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.2s, background 0.3s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .btn-weight:hover { opacity: 0.85; }
+
+  .weight-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .weight-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .weight-row-date {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .weight-row-val {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    transition: color 0.3s;
+  }
+
+  .weight-row-delta {
+    font-size: 12px;
+    margin-left: 6px;
+    font-weight: 500;
+  }
+
+  .delta-up   { color: #c0776a; }
+  .delta-down { color: var(--accent); }
+  .delta-same { color: var(--muted); }
+
+  .weight-delete {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+    border-radius: 6px;
+    transition: color 0.15s;
+  }
+
+  .weight-delete:hover { color: var(--red); }
+
+  /* ── REMINDER BANNER ── */
+  .reminder-banner {
+    background: var(--surface);
+    border: 1px solid var(--accent-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .reminder-icon { font-size: 22px; flex-shrink: 0; }
+
+  .reminder-text { flex: 1; }
+  .reminder-text strong {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    transition: color 0.3s;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .reminder-text span { font-size: 12px; color: var(--muted); }
+
+  .reminder-dismiss {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--accent);
+    color: #0f1117;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 12px 24px;
+    border-radius: 50px;
+    transition: transform 0.3s ease, background 0.3s;
+    z-index: 999;
+    pointer-events: none;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── TAB CONTENT ── */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- PERSON SWITCHER -->
+<div class="person-bar">
+  <button class="person-btn active-quena" id="btnQuena" onclick="switchPerson('quena')">
+    <div class="person-avatar avatar-q">Q</div> Quena
+  </button>
+  <button class="person-btn" id="btnCarlos" onclick="switchPerson('carlos')">
+    <div class="person-avatar avatar-c">C</div> Carlos
+  </button>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">move<span>.</span></div>
+  <div class="streak">🔥 <span class="streak-num" id="streakNum">0</span> días</div>
+</header>
+
+<!-- INNER TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('log')">Log</button>
+  <button class="tab" onclick="switchTab('calendar')">Calendar</button>
+  <button class="tab" onclick="switchTab('history')">History</button>
+  <button class="tab" onclick="switchTab('weight')">Weight</button>
+</div>
+
+<main>
+
+  <!-- LOG TAB -->
+  <div class="tab-content active" id="tab-log">
+    <div class="log-card">
+      <div class="log-title" id="logTitle">What did you do today?</div>
+
+      <div class="field-row">
+        <div class="field-label">Date</div>
+        <input type="date" id="logDate" />
+      </div>
+
+      <div class="field-row">
+        <div class="field-label">Activity</div>
+        <div class="activity-chips" id="chips">
+          <div class="chip" onclick="toggleChip(this)" data-val="Gym / Weights">💪 Gym</div>
+          <div class="chip" onclick="toggleChip(this)" data-val="Run">🏃 Run</div>
+          <div class="chip" onclick="toggleChip(this)" data-val="Bike">🚴 Bike</div>
+          <div class="chip" onclick="toggleChip(this)" data-val="Yoga">🧘 Yoga</div>
+          <div class="chip" onclick="toggleChip(this)" data-val="Swim">🏊 Swim</div>
+          <div class="chip" onclick="toggleChip(this)" data-val="Sport">⚽ Sport</div>
+          <div class="chip" onclick="toggleChip(this)" data-val="Walk">🚶 Walk</div>
+          <div class="chip" onclick="toggleChip(this)" data-val="Other">✨ Other</div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-label">Energy</div>
+        <div class="mood-chips">
+          <div class="mood-chip" onclick="selectMood(this)" data-val="💪 Strong">💪 Strong</div>
+          <div class="mood-chip" onclick="selectMood(this)" data-val="😐 Okay">😐 Okay</div>
+          <div class="mood-chip" onclick="selectMood(this)" data-val="😴 Low">😴 Low</div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-label">Note (optional)</div>
+        <textarea id="logNote" placeholder="E.g. legs, 30 min cardio…"></textarea>
+      </div>
+
+      <button class="btn-log" id="btnLog" onclick="logWorkout()">Save</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num" id="statTotal">0</div>
+        <div class="stat-label">Total days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="statMonth">0</div>
+        <div class="stat-label">This month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="statWeek">0</div>
+        <div class="stat-label">This week</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR TAB -->
+  <div class="tab-content" id="tab-calendar">
+    <div class="calendar-header">
+      <button class="cal-nav" onclick="changeMonth(-1)">‹</button>
+      <div class="cal-month" id="calMonthLabel"></div>
+      <button class="cal-nav" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div class="tab-content" id="tab-history">
+    <div class="section-label">All entries</div>
+    <div class="entry-list" id="entryList"></div>
+  </div>
+
+  <!-- WEIGHT TAB -->
+  <div class="tab-content" id="tab-weight">
+    <div id="reminderBanner" style="display:none">
+      <div class="reminder-banner">
+        <div class="reminder-icon">⚖️</div>
+        <div class="reminder-text">
+          <strong>Weigh-in Sunday!</strong>
+          <span>Log your weight below to track your progress.</span>
+        </div>
+        <button class="reminder-dismiss" onclick="dismissReminder()" title="Dismiss">×</button>
+      </div>
+    </div>
+
+    <div class="weight-banner">
+      <div class="weight-current-label">Current weight</div>
+      <div>
+        <span class="weight-current-val" id="weightCurrentVal">—</span>
+        <span class="weight-current-unit" id="currentUnit">lbs</span>
+      </div>
+      <div class="weight-since" id="weightSince"></div>
+    </div>
+
+    <div class="weight-form">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="log-title" style="margin-bottom:0;">Log weight</div>
+        <div class="unit-toggle">
+          <button class="unit-opt active" id="unitLbs" onclick="setUnit('lbs')">lbs</button>
+          <button class="unit-opt" id="unitKg" onclick="setUnit('kg')">kg</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;">
+        <div class="field-row" style="flex:1;margin-bottom:0;">
+          <div class="field-label">Date</div>
+          <input type="date" id="weightDate" />
+        </div>
+        <div class="field-row" style="flex:1;margin-bottom:0;">
+          <div class="field-label">Weight</div>
+          <div class="weight-input-wrap">
+            <input type="number" id="weightVal" placeholder="0.0" step="0.1" min="0" />
+            <span class="unit-label" id="unitLabel">lbs</span>
+          </div>
+        </div>
+        <button class="btn-weight" onclick="logWeight()">Save</button>
+      </div>
+    </div>
+
+    <div class="section-label">History</div>
+    <div class="weight-list" id="weightList"></div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://zgmxaszvedyieshzmryv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_BXG1JU8IoKFiJdeSfzT2-g_yqjr7lA5';
+const TABLE = 'fitness_logs';
+const WEIGHT_TABLE = 'fitness_weight';
+
+const PEOPLE = {
+  quena: {
+    accent: '#7a94b2',
+    accentGlow: 'rgba(122,148,178,0.13)',
+    accentBorder: 'rgba(122,148,178,0.25)',
+    emptyIcon: '🏃‍♀️',
+    greeting: 'What did you do today, Quena?'
+  },
+  carlos: {
+    accent: '#52785f',
+    accentGlow: 'rgba(82,120,95,0.13)',
+    accentBorder: 'rgba(82,120,95,0.25)',
+    emptyIcon: '🏋️',
+    greeting: 'What did you do today, Carlos?'
+  }
+};
+
+// ── STATE ──────────────────────────────────────────────────────────────────────
+let currentPerson = 'quena';
+let entriesMap = { quena: [], carlos: [] };
+let useSupabase = false;
+let calYear, calMonth;
+let currentTab = 'log';
+
+// ── SUPABASE ───────────────────────────────────────────────────────────────────
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || '',
+      ...opts.headers
+    },
+    ...opts
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function loadAllFromSupabase() {
+  try {
+    const data = await sbFetch(TABLE + '?order=date.desc&select=*');
+    return data || [];
+  } catch (e) {
+    console.warn('Supabase load failed:', e);
+    return null;
+  }
+}
+
+async function saveToSupabase(entry) {
+  try {
+    await sbFetch(TABLE, { method: 'POST', prefer: 'return=representation', body: JSON.stringify(entry) });
+    return true;
+  } catch (e) { console.warn('Supabase save failed:', e); return false; }
+}
+
+async function deleteFromSupabase(id) {
+  try {
+    await sbFetch(TABLE + '?id=eq.' + id, { method: 'DELETE' });
+    return true;
+  } catch (e) { console.warn('Supabase delete failed:', e); return false; }
+}
+
+// ── LOCAL ──────────────────────────────────────────────────────────────────────
+function saveLocal() {
+  localStorage.setItem('fitness_entries_v2', JSON.stringify(entriesMap));
+}
+
+function loadLocal() {
+  const raw = localStorage.getItem('fitness_entries_v2');
+  return raw ? JSON.parse(raw) : { quena: [], carlos: [] };
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────────
+async function init() {
+  const today = new Date();
+  calYear = today.getFullYear();
+  calMonth = today.getMonth();
+  document.getElementById('logDate').value = fmtDate(today);
+  document.getElementById('weightDate').value = fmtDate(today);
+
+  const remote = await loadAllFromSupabase();
+  if (remote !== null) {
+    useSupabase = true;
+    // split by person field
+    entriesMap.quena = remote.filter(e => e.person === 'quena');
+    entriesMap.carlos = remote.filter(e => e.person === 'carlos');
+    saveLocal();
+  } else {
+    entriesMap = loadLocal();
+  }
+
+  applyTheme('quena');
+  // Load weight from Supabase
+  const remoteWeight = await loadWeightFromSupabase();
+  if (remoteWeight !== null) {
+    weightMap.quena  = remoteWeight.filter(e => e.person === 'quena');
+    weightMap.carlos = remoteWeight.filter(e => e.person === 'carlos');
+    saveWeightLocal();
+  } else {
+    weightMap = loadWeightLocal();
+  }
+  // restore saved unit
+  if (weightUnit === 'kg') { document.getElementById('unitLbs').classList.remove('active'); document.getElementById('unitKg').classList.add('active'); }
+  renderAll();
+}
+
+// ── PERSON SWITCH ──────────────────────────────────────────────────────────────
+function switchPerson(person) {
+  currentPerson = person;
+  applyTheme(person);
+
+  document.getElementById('btnQuena').className = 'person-btn' + (person === 'quena' ? ' active-quena' : '');
+  document.getElementById('btnCarlos').className = 'person-btn' + (person === 'carlos' ? ' active-carlos' : '');
+
+  // reset chips
+  document.querySelectorAll('.chip.selected').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.mood-chip.selected').forEach(c => c.classList.remove('selected'));
+  document.getElementById('logNote').value = '';
+  document.getElementById('logDate').value = fmtDate(new Date());
+  if (document.getElementById('weightDate')) document.getElementById('weightDate').value = fmtDate(new Date());
+
+  renderAll();
+}
+
+function applyTheme(person) {
+  const p = PEOPLE[person];
+  document.documentElement.style.setProperty('--accent', p.accent);
+  document.documentElement.style.setProperty('--accent-glow', p.accentGlow);
+  document.documentElement.style.setProperty('--accent-border', p.accentBorder);
+  document.getElementById('logTitle').textContent = p.greeting;
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────────
+function fmtDate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function fmtDisplay(dateStr) {
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `${d} ${names[m-1]} ${y}`;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function toggleChip(el) { el.classList.toggle('selected'); }
+
+function selectMood(el) {
+  document.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function getSelectedMood() {
+  const el = document.querySelector('.mood-chip.selected');
+  return el ? el.dataset.val : '';
+}
+
+function getSelectedActivities() {
+  return [...document.querySelectorAll('.chip.selected')].map(c => c.dataset.val);
+}
+
+// ── LOG ────────────────────────────────────────────────────────────────────────
+async function logWorkout() {
+  const date = document.getElementById('logDate').value;
+  const activities = getSelectedActivities();
+  const note = document.getElementById('logNote').value.trim();
+
+  if (!date) { showToast('⚠️ Choose a date'); return; }
+  if (!activities.length) { showToast('⚠️ Pick at least one activity'); return; }
+
+  const btn = document.getElementById('btnLog');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  const mood = getSelectedMood();
+  const entry = {
+    id: Date.now().toString(),
+    person: currentPerson,
+    date,
+    activities,
+    note,
+    mood
+  };
+
+  if (useSupabase) await saveToSupabase(entry);
+  entriesMap[currentPerson].unshift(entry);
+  saveLocal();
+
+  document.querySelectorAll('.chip.selected').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.mood-chip.selected').forEach(c => c.classList.remove('selected'));
+  document.getElementById('logNote').value = '';
+  document.getElementById('logDate').value = fmtDate(new Date());
+  if (document.getElementById('weightDate')) document.getElementById('weightDate').value = fmtDate(new Date());
+  btn.disabled = false;
+  btn.textContent = 'Save';
+
+  showToast('✅ Logged!');
+  renderAll();
+}
+
+// ── DELETE ─────────────────────────────────────────────────────────────────────
+async function deleteGroup(date) {
+  if (!confirm(`Delete entries from ${fmtDisplay(date)}?`)) return;
+  const toDelete = entriesMap[currentPerson].filter(e => e.date === date);
+  if (useSupabase) await Promise.all(toDelete.map(e => deleteFromSupabase(e.id)));
+  entriesMap[currentPerson] = entriesMap[currentPerson].filter(e => e.date !== date);
+  saveLocal();
+  showToast('Deleted');
+  renderAll();
+}
+
+// ── RENDER ALL ─────────────────────────────────────────────────────────────────
+function renderAll() {
+  const entries = entriesMap[currentPerson];
+  renderStats(entries);
+  renderStreak(entries);
+  renderCalendar(entries);
+  renderHistory(entries);
+  if (currentTab === 'weight') renderWeight();
+}
+
+// ── STATS ──────────────────────────────────────────────────────────────────────
+function renderStats(entries) {
+  const now = new Date();
+  const thisMonth = fmtDate(now).slice(0,7);
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+
+  const total = new Set(entries.map(e => e.date)).size;
+  const month = new Set(entries.filter(e => e.date.startsWith(thisMonth)).map(e => e.date)).size;
+  const week  = new Set(entries.filter(e => new Date(e.date + 'T00:00:00') >= weekStart).map(e => e.date)).size;
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statMonth').textContent = month;
+  document.getElementById('statWeek').textContent  = week;
+}
+
+// ── STREAK ─────────────────────────────────────────────────────────────────────
+function renderStreak(entries) {
+  const active = new Set(entries.map(e => e.date));
+  let streak = 0, d = new Date();
+  while (active.has(fmtDate(d))) { streak++; d.setDate(d.getDate()-1); }
+  document.getElementById('streakNum').textContent = streak;
+}
+
+// ── CALENDAR ───────────────────────────────────────────────────────────────────
+function changeMonth(dir) {
+  calMonth += dir;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCalendar(entriesMap[currentPerson]);
+}
+
+function renderCalendar(entries) {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('calMonthLabel').textContent = `${months[calMonth]} ${calYear}`;
+
+  const activeDates = {};
+  entries.forEach(e => {
+    if (!activeDates[e.date]) activeDates[e.date] = [];
+    activeDates[e.date].push(...e.activities);
+  });
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-dow';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const todayStr = fmtDate(new Date());
+
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-day empty';
+    grid.appendChild(el);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const el = document.createElement('div');
+    el.className = 'cal-day';
+    el.textContent = day;
+
+    if (activeDates[dateStr]) {
+      el.classList.add('active-day');
+      const tip = document.createElement('div');
+      tip.className = 'cal-tooltip';
+      tip.textContent = [...new Set(activeDates[dateStr])].join(', ');
+      el.appendChild(tip);
+    } else {
+      el.classList.add('inactive');
+    }
+
+    if (dateStr === todayStr) el.classList.add('today');
+    grid.appendChild(el);
+  }
+}
+
+// ── HISTORY ────────────────────────────────────────────────────────────────────
+function renderHistory(entries) {
+  const list = document.getElementById('entryList');
+  const p = PEOPLE[currentPerson];
+
+  const byDate = {};
+  entries.forEach(e => {
+    if (!byDate[e.date]) byDate[e.date] = { date: e.date, activities: [], notes: [], moods: [] };
+    byDate[e.date].activities.push(...e.activities);
+    if (e.note) byDate[e.date].notes.push(e.note);
+    if (e.mood) byDate[e.date].moods.push(e.mood);
+  });
+
+  const sorted = Object.values(byDate).sort((a,b) => b.date.localeCompare(a.date));
+
+  if (!sorted.length) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">${p.emptyIcon}</div><p>No entries yet.<br>Start today!</p></div>`;
+    return;
+  }
+
+  list.innerHTML = sorted.map(g => `
+    <div class="entry-card">
+      <div class="entry-dot"></div>
+      <div class="entry-info">
+        <div class="entry-date">${fmtDisplay(g.date)}</div>
+        <div class="entry-activities">
+          ${[...new Set(g.activities)].map(a => `<span class="entry-tag">${a}</span>`).join('')}
+        </div>
+        ${g.moods.length ? `<div class="mood-tag">${[...new Set(g.moods)].join(' · ')}</div>` : ''}
+        ${g.notes.length ? `<div class="entry-note">${g.notes.join(' · ')}</div>` : ''}
+      </div>
+      <button class="entry-delete" onclick="deleteGroup('${g.date}')" title="Delete">×</button>
+    </div>
+  `).join('');
+}
+
+// ── TABS ───────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  currentTab = name;
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['log','calendar','history','weight'][i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'calendar') renderCalendar(entriesMap[currentPerson]);
+  if (name === 'weight') renderWeight();
+}
+
+
+
+// ── UNIT ───────────────────────────────────────────────────────────────────────
+let weightUnit = localStorage.getItem('weight_unit') || 'lbs';
+
+function setUnit(unit) {
+  weightUnit = unit;
+  localStorage.setItem('weight_unit', unit);
+  document.getElementById('unitLbs').classList.toggle('active', unit === 'lbs');
+  document.getElementById('unitKg').classList.toggle('active', unit === 'kg');
+  document.getElementById('unitLabel').textContent = unit;
+  document.getElementById('currentUnit').textContent = unit;
+  renderWeight();
+}
+
+function displayWeight(lbsVal) {
+  if (weightUnit === 'kg') return (lbsVal * 0.453592).toFixed(1);
+  return lbsVal.toFixed(1);
+}
+
+
+async function loadWeightFromSupabase() {
+  try {
+    const data = await sbFetch(WEIGHT_TABLE + '?order=date.desc&select=*');
+    return data || [];
+  } catch (e) {
+    console.warn('Supabase weight load failed:', e);
+    return null;
+  }
+}
+
+async function saveWeightToSupabase(entry) {
+  try {
+    await sbFetch(WEIGHT_TABLE, { method: 'POST', prefer: 'return=representation', body: JSON.stringify(entry) });
+    return true;
+  } catch (e) { console.warn('Supabase weight save failed:', e); return false; }
+}
+
+async function deleteWeightFromSupabase(id) {
+  try {
+    await sbFetch(WEIGHT_TABLE + '?id=eq.' + id, { method: 'DELETE' });
+    return true;
+  } catch (e) { console.warn('Supabase weight delete failed:', e); return false; }
+}
+
+// ── WEIGHT STATE ───────────────────────────────────────────────────────────────
+let weightMap = { quena: [], carlos: [] }; // [{ id, date, value }]
+
+function saveWeightLocal() {
+  localStorage.setItem('fitness_weight_v1', JSON.stringify(weightMap));
+}
+
+function loadWeightLocal() {
+  const raw = localStorage.getItem('fitness_weight_v1');
+  return raw ? JSON.parse(raw) : { quena: [], carlos: [] };
+}
+
+// ── WEIGHT LOG ─────────────────────────────────────────────────────────────────
+function logWeight() {
+  const date = document.getElementById('weightDate').value;
+  const val  = parseFloat(document.getElementById('weightVal').value);
+
+  if (!date) { showToast('⚠️ Choose a date'); return; }
+  if (!val || val <= 0) { showToast('⚠️ Enter a valid weight'); return; }
+
+  const entry = { id: Date.now().toString(), person: currentPerson, date, value: val };
+  if (useSupabase) await saveWeightToSupabase(entry);
+  weightMap[currentPerson].push(entry);
+  weightMap[currentPerson].sort((a,b) => b.date.localeCompare(a.date));
+  saveWeightLocal();
+
+  document.getElementById('weightVal').value = '';
+  document.getElementById('weightDate').value = fmtDate(new Date());
+
+  showToast('⚖️ Weight saved!');
+  renderWeight();
+}
+
+async function deleteWeight(id) {
+  if (useSupabase) await deleteWeightFromSupabase(id);
+  weightMap[currentPerson] = weightMap[currentPerson].filter(e => e.id !== id);
+  saveWeightLocal();
+  renderWeight();
+}
+
+// ── RENDER WEIGHT ──────────────────────────────────────────────────────────────
+function renderWeight() {
+  const entries = weightMap[currentPerson];
+  const list = document.getElementById('weightList');
+  const currentEl = document.getElementById('weightCurrentVal');
+  const sinceEl   = document.getElementById('weightSince');
+
+  // Sunday reminder
+  const today = new Date();
+  const isSunday = today.getDay() === 0;
+  const dismissedKey = 'weight_reminder_dismissed_' + fmtDate(today);
+  const dismissed = localStorage.getItem(dismissedKey);
+  const banner = document.getElementById('reminderBanner');
+  banner.style.display = (isSunday && !dismissed) ? 'block' : 'none';
+
+  if (!entries.length) {
+    currentEl.textContent = '—';
+    sinceEl.textContent = '';
+    list.innerHTML = '<div class="empty-state"><div class="icon">⚖️</div><p>No weight entries yet.<br>Log your first one above!</p></div>';
+    return;
+  }
+
+  const latest = entries[0];
+  currentEl.textContent = displayWeight(latest.value);
+  document.getElementById('currentUnit').textContent = weightUnit;
+
+  // diff from first entry
+  const first = entries[entries.length - 1];
+  if (entries.length > 1) {
+    const rawDiff = latest.value - first.value;
+    const diff = weightUnit === 'kg' ? (rawDiff * 0.453592).toFixed(1) : rawDiff.toFixed(1);
+    const sign = diff > 0 ? '+' : '';
+    sinceEl.innerHTML = `<span>${sign}${diff} ${weightUnit}</span> since ${fmtDisplay(first.date)}`;
+  } else {
+    sinceEl.textContent = `Logged on ${fmtDisplay(latest.date)}`;
+  }
+
+  list.innerHTML = entries.map((e, i) => {
+    const prev = entries[i + 1];
+    let deltaHtml = '';
+    if (prev) {
+      const rawD = e.value - prev.value;
+      const d = weightUnit === 'kg' ? (rawD * 0.453592).toFixed(1) : rawD.toFixed(1);
+      const cls = d > 0 ? 'delta-up' : d < 0 ? 'delta-down' : 'delta-same';
+      const sign = d > 0 ? '+' : '';
+      deltaHtml = `<span class="weight-row-delta ${cls}">${sign}${d}</span>`;
+    }
+    return `
+      <div class="weight-row">
+        <div class="weight-row-date">${fmtDisplay(e.date)}</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span class="weight-row-val">${displayWeight(e.value)} ${weightUnit}</span>
+          ${deltaHtml}
+        </div>
+        <button class="weight-delete" onclick="deleteWeight('${e.id}')" title="Delete">×</button>
+      </div>`;
+  }).join('');
+}
+
+function dismissReminder() {
+  const key = 'weight_reminder_dismissed_' + fmtDate(new Date());
+  localStorage.setItem(key, '1');
+  document.getElementById('reminderBanner').style.display = 'none';
+}
+
+// ── START ──────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
