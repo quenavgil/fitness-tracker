@@ -1060,6 +1060,9 @@ async function init() {
   const today = new Date();
   calYear = today.getFullYear();
   calMonth = today.getMonth();
+  // restore last tab
+  const savedTab = localStorage.getItem('fitness_tab');
+  if (savedTab && savedTab !== 'log') switchTab(savedTab);
   document.getElementById('logDate').value = fmtDate(today);
   const wdEl = document.getElementById('weightDate');
   if (wdEl) wdEl.value = fmtDate(today);
@@ -1104,6 +1107,7 @@ async function init() {
 function switchPerson(person) {
   currentPerson = person;
   applyTheme(person);
+  switchTab('log');
 
   document.getElementById('btnQuena').className = 'person-btn' + (person === 'quena' ? ' active-quena' : '');
   document.getElementById('btnCarlos').className = 'person-btn' + (person === 'carlos' ? ' active-carlos' : '');
@@ -1412,6 +1416,7 @@ function renderHistory(entries) {
 // ── TABS ───────────────────────────────────────────────────────────────────────
 function switchTab(name) {
   currentTab = name;
+  localStorage.setItem('fitness_tab', name);
   document.querySelectorAll('.tab').forEach((t,i) => {
     t.classList.toggle('active', ['log','calendar','history','weight','steps'][i] === name);
   });
