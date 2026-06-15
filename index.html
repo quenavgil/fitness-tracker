@@ -1077,13 +1077,12 @@ async function init() {
   } else {
     weightMap = loadWeightLocal();
   }
-  // restore saved unit
   // load health from Supabase BEFORE rendering
   try {
-    const remoteHealthQ = await loadHealthFromSupabase('quena');
-    const remoteHealthC = await loadHealthFromSupabase('carlos');
-    if (remoteHealthQ.length) healthMap.quena = remoteHealthQ;
-    if (remoteHealthC.length) healthMap.carlos = remoteHealthC;
+    const remoteHealthQ = await sbFetch(HEALTH_TABLE + '?person=eq.quena&order=date.desc&select=*').catch(() => []);
+    const remoteHealthC = await sbFetch(HEALTH_TABLE + '?person=eq.carlos&order=date.desc&select=*').catch(() => []);
+    if (remoteHealthQ && remoteHealthQ.length) healthMap.quena = remoteHealthQ;
+    if (remoteHealthC && remoteHealthC.length) healthMap.carlos = remoteHealthC;
     localStorage.setItem('fitness_health_v1', JSON.stringify(healthMap));
   } catch(e) { console.warn('Health load error:', e); }
   renderAll();
