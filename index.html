@@ -42,13 +42,15 @@
   /* ── PERSON SWITCHER ── */
   .person-bar {
     display: flex;
+    flex-wrap: wrap;
     padding: 14px 20px 0;
     gap: 8px;
     background: var(--bg);
   }
 
   .person-btn {
-    flex: 1;
+    flex: 1 1 45%;
+    min-width: 120px;
     padding: 10px 0;
     border-radius: 12px;
     font-family: 'Space Grotesk', sans-serif;
@@ -65,16 +67,10 @@
     gap: 8px;
   }
 
-  .person-btn.active-quena {
-    background: rgba(122,148,178,0.12);
-    border-color: #7a94b2;
-    color: #7a94b2;
-  }
-
-  .person-btn.active-carlos {
-    background: rgba(106,171,122,0.12);
-    border-color: #6aab7a;
-    color: #6aab7a;
+  .person-btn.active {
+    background: var(--person-glow);
+    border-color: var(--person-color);
+    color: var(--person-color);
   }
 
   .person-avatar {
@@ -88,8 +84,7 @@
     font-weight: 700;
   }
 
-  .avatar-q { background: rgba(122,148,178,0.2); color: #7a94b2; }
-  .avatar-c { background: rgba(106,171,122,0.2); color: #6aab7a; }
+  .person-avatar { background: var(--avatar-bg); color: var(--avatar-color); }
 
   /* ── HEADER ── */
   header {
@@ -741,14 +736,7 @@
 
 <div class="app-shell">
 <!-- PERSON SWITCHER -->
-<div class="person-bar">
-  <button class="person-btn active-quena" id="btnQuena" onclick="switchPerson('quena')">
-    <div class="person-avatar avatar-q">Q</div> Quena
-  </button>
-  <button class="person-btn" id="btnCarlos" onclick="switchPerson('carlos')">
-    <div class="person-avatar avatar-c">C</div> Carlos
-  </button>
-</div>
+<div class="person-bar" id="personBar"></div>
 
 <!-- HEADER -->
 <header>
@@ -785,6 +773,7 @@
           <div class="chip" onclick="toggleChip(this)" data-val="Walk">🚶 Walk</div>
           <div class="chip" onclick="toggleChip(this)" data-val="Weights">🏋️ Weights</div>
           <div class="chip" onclick="toggleChip(this)" data-val="Stretching">🤸 Stretching</div>
+          <div class="chip" onclick="toggleChip(this)" data-val="Pilates">🤍 Pilates</div>
           <div class="chip" onclick="toggleChip(this)" data-val="Other">✨ Other</div>
         </div>
       </div>
@@ -900,6 +889,8 @@ const WEIGHT_TABLE = 'fitness_weight';
 
 const PEOPLE = {
   quena: {
+    name: 'Quena',
+    initial: 'Q',
     accent: '#7a94b2',
     accentGlow: 'rgba(122,148,178,0.13)',
     accentBorder: 'rgba(122,148,178,0.25)',
@@ -907,17 +898,38 @@ const PEOPLE = {
     greeting: 'What did you do today, Quena?'
   },
   carlos: {
+    name: 'Carlos',
+    initial: 'C',
     accent: '#6aab7a',
     accentGlow: 'rgba(106,171,122,0.18)',
     accentBorder: 'rgba(106,171,122,0.35)',
     emptyIcon: '🏋️',
     greeting: 'What did you do today, Carlos?'
+  },
+  julie: {
+    name: 'Julie',
+    initial: 'J',
+    accent: '#c2937a',
+    accentGlow: 'rgba(194,147,122,0.16)',
+    accentBorder: 'rgba(194,147,122,0.3)',
+    emptyIcon: '🤸‍♀️',
+    greeting: 'What did you do today, Julie?'
+  },
+  gema: {
+    name: 'Gema',
+    initial: 'G',
+    accent: '#a98bc4',
+    accentGlow: 'rgba(169,139,196,0.16)',
+    accentBorder: 'rgba(169,139,196,0.3)',
+    emptyIcon: '🧘‍♀️',
+    greeting: 'What did you do today, Gema?'
   }
 };
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
 let currentPerson = 'quena';
-let entriesMap = { quena: [], carlos: [] };
+let entriesMap = {};
+Object.keys(PEOPLE).forEach(p => entriesMap[p] = []);
 let useSupabase = false;
 let calYear, calMonth;
 let currentTab = 'log';
@@ -989,20 +1001,24 @@ async function init() {
   const remote = await loadAllFromSupabase();
   if (remote !== null) {
     useSupabase = true;
-    // split by person field
-    entriesMap.quena = remote.filter(e => e.person === 'quena');
-    entriesMap.carlos = remote.filter(e => e.person === 'carlos');
+    // split by person field, dynamically for all people
+    Object.keys(PEOPLE).forEach(p => {
+      entriesMap[p] = remote.filter(e => e.person === p);
+    });
     saveLocal();
   } else {
     entriesMap = loadLocal();
+    Object.keys(PEOPLE).forEach(p => { if (!entriesMap[p]) entriesMap[p] = []; });
   }
 
-  applyTheme('quena');
+  renderPersonBar();
+  applyTheme(currentPerson);
   // Load weight from Supabase
   const remoteWeight = await loadWeightFromSupabase();
   if (remoteWeight !== null) {
-    weightMap.quena  = remoteWeight.filter(e => e.person === 'quena');
-    weightMap.carlos = remoteWeight.filter(e => e.person === 'carlos');
+    Object.keys(PEOPLE).forEach(p => {
+      weightMap[p] = remoteWeight.filter(e => e.person === p);
+    });
     saveWeightLocal();
   } else {
     weightMap = loadWeightLocal();
@@ -1014,13 +1030,22 @@ async function init() {
 }
 
 // ── PERSON SWITCH ──────────────────────────────────────────────────────────────
+function renderPersonBar() {
+  const bar = document.getElementById('personBar');
+  bar.innerHTML = Object.keys(PEOPLE).map(key => {
+    const p = PEOPLE[key];
+    const isActive = key === currentPerson ? ' active' : '';
+    return `<button class="person-btn${isActive}" id="btn-${key}" onclick="switchPerson('${key}')" style="${isActive ? `--person-color:${p.accent};--person-glow:${p.accentGlow}` : ''}">
+      <div class="person-avatar" style="--avatar-bg:${p.accentGlow};--avatar-color:${p.accent}">${p.initial}</div> ${p.name}
+    </button>`;
+  }).join('');
+}
+
 function switchPerson(person) {
   currentPerson = person;
   applyTheme(person);
   switchTab('log');
-
-  document.getElementById('btnQuena').className = 'person-btn' + (person === 'quena' ? ' active-quena' : '');
-  document.getElementById('btnCarlos').className = 'person-btn' + (person === 'carlos' ? ' active-carlos' : '');
+  renderPersonBar();
 
   // reset chips
   historyFilter = null;
@@ -1375,7 +1400,8 @@ async function deleteWeightFromSupabase(id) {
 }
 
 // ── WEIGHT STATE ───────────────────────────────────────────────────────────────
-let weightMap = { quena: [], carlos: [] };
+let weightMap = {};
+Object.keys(PEOPLE).forEach(p => weightMap[p] = []);
 
 function saveWeightLocal() {
   localStorage.setItem('fitness_weight_v1', JSON.stringify(weightMap));
