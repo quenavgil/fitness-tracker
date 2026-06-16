@@ -450,6 +450,75 @@
 
   .entry-delete:hover { color: var(--red); }
 
+  .entry-edit {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 15px;
+    padding: 0 4px;
+    border-radius: 6px;
+    transition: color 0.15s;
+    flex-shrink: 0;
+  }
+
+  .entry-edit:hover { color: var(--accent); }
+
+  .entry-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+
+  /* ── EDIT MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-overlay.visible { display: flex; }
+
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    width: 100%;
+    max-width: 440px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .modal-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .modal-actions .btn-log { margin-top: 0; }
+
+  .btn-cancel {
+    flex: 1;
+    padding: 12px;
+    background: var(--surface2);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+  }
+
   .empty-state {
     text-align: center;
     padding: 40px 20px;
@@ -780,7 +849,7 @@
 
       <div class="field-row">
         <div class="field-label">Energy</div>
-        <div class="mood-chips">
+        <div class="mood-chips" id="mood-chips-main">
           <div class="mood-chip" onclick="selectMood(this)" data-val="💪 Strong">💪 Strong</div>
           <div class="mood-chip" onclick="selectMood(this)" data-val="😐 Okay">😐 Okay</div>
           <div class="mood-chip" onclick="selectMood(this)" data-val="😴 Low">😴 Low</div>
@@ -879,6 +948,51 @@
 </main>
 
 <div class="toast" id="toast"></div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-title" id="editModalTitle">Edit entry</div>
+
+    <div class="field-row">
+      <div class="field-label">Activity</div>
+      <div class="activity-chips" id="editChips">
+        <div class="chip" onclick="toggleChip(this)" data-val="Run">🏃 Run</div>
+        <div class="chip" onclick="toggleChip(this)" data-val="Yoga">🧘 Yoga</div>
+        <div class="chip" onclick="toggleChip(this)" data-val="Swim">🏊 Swim</div>
+        <div class="chip" onclick="toggleChip(this)" data-val="Walk">🚶 Walk</div>
+        <div class="chip" onclick="toggleChip(this)" data-val="Weights">🏋️ Weights</div>
+        <div class="chip" onclick="toggleChip(this)" data-val="Stretching">🤸 Stretching</div>
+        <div class="chip" onclick="toggleChip(this)" data-val="Pilates">🤍 Pilates</div>
+        <div class="chip" onclick="toggleChip(this)" data-val="Other">✨ Other</div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-label">Energy</div>
+      <div class="mood-chips" id="editMoodChips">
+        <div class="mood-chip" onclick="selectMood(this)" data-val="💪 Strong">💪 Strong</div>
+        <div class="mood-chip" onclick="selectMood(this)" data-val="😐 Okay">😐 Okay</div>
+        <div class="mood-chip" onclick="selectMood(this)" data-val="😴 Low">😴 Low</div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-label">Steps (optional)</div>
+      <input type="number" id="editSteps" placeholder="e.g. 8500" min="0" />
+    </div>
+
+    <div class="field-row">
+      <div class="field-label">Note (optional)</div>
+      <textarea id="editNote" placeholder="E.g. legs, 30 min cardio…"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="btn-log" onclick="saveEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────────────────────
@@ -1090,17 +1204,18 @@ function showToast(msg) {
 function toggleChip(el) { el.classList.toggle('selected'); }
 
 function selectMood(el) {
-  document.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('selected'));
+  const container = el.closest('.mood-chips');
+  container.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
 }
 
 function getSelectedMood() {
-  const el = document.querySelector('.mood-chip.selected');
+  const el = document.querySelector('#mood-chips-main .mood-chip.selected');
   return el ? el.dataset.val : '';
 }
 
 function getSelectedActivities() {
-  return [...document.querySelectorAll('.chip.selected')].map(c => c.dataset.val);
+  return [...document.querySelectorAll('#chips .chip.selected')].map(c => c.dataset.val);
 }
 
 // ── LOG ────────────────────────────────────────────────────────────────────────
@@ -1156,6 +1271,82 @@ async function deleteGroup(date) {
   entriesMap[currentPerson] = entriesMap[currentPerson].filter(e => e.date !== date);
   saveLocal();
   showToast('Deleted');
+  renderAll();
+}
+
+// ── EDIT MODAL ───────────────────────────────────────────────────────────────────
+let editingDate = null;
+
+function openEditModal(date) {
+  editingDate = date;
+  const dayEntries = entriesMap[currentPerson].filter(e => e.date === date);
+
+  const allActivities = new Set();
+  const allMoods = [];
+  const allNotes = [];
+  let totalSteps = null;
+  dayEntries.forEach(e => {
+    e.activities.forEach(a => allActivities.add(a));
+    if (e.mood) allMoods.push(e.mood);
+    if (e.note) allNotes.push(e.note);
+    if (e.steps) totalSteps = e.steps;
+  });
+
+  // reset modal chips
+  document.querySelectorAll('#editChips .chip').forEach(c => {
+    c.classList.toggle('selected', allActivities.has(c.dataset.val));
+  });
+  document.querySelectorAll('#editMoodChips .mood-chip').forEach(c => {
+    c.classList.toggle('selected', allMoods.includes(c.dataset.val));
+  });
+  document.getElementById('editSteps').value = totalSteps || '';
+  document.getElementById('editNote').value = allNotes.join(' · ');
+  document.getElementById('editModalTitle').textContent = `Edit · ${fmtDisplay(date)}`;
+
+  document.getElementById('editModal').classList.add('visible');
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('visible');
+  editingDate = null;
+}
+
+async function saveEdit() {
+  if (!editingDate) return;
+
+  const activities = [...document.querySelectorAll('#editChips .chip.selected')].map(c => c.dataset.val);
+  const moodEl = document.querySelector('#editMoodChips .mood-chip.selected');
+  const mood = moodEl ? moodEl.dataset.val : '';
+  const stepsVal = document.getElementById('editSteps').value;
+  const steps = stepsVal ? parseInt(stepsVal) : null;
+  const note = document.getElementById('editNote').value.trim();
+
+  if (!activities.length) { showToast('⚠️ Pick at least one activity'); return; }
+
+  const date = editingDate;
+  const oldEntries = entriesMap[currentPerson].filter(e => e.date === date);
+
+  // delete old entries (Supabase + local)
+  if (useSupabase) await Promise.all(oldEntries.map(e => deleteFromSupabase(e.id)));
+  entriesMap[currentPerson] = entriesMap[currentPerson].filter(e => e.date !== date);
+
+  // create one consolidated entry
+  const entry = {
+    id: Date.now().toString(),
+    person: currentPerson,
+    date,
+    activities,
+    note,
+    mood,
+    steps
+  };
+
+  if (useSupabase) await saveToSupabase(entry);
+  entriesMap[currentPerson].unshift(entry);
+  saveLocal();
+
+  closeEditModal();
+  showToast('✅ Updated!');
   renderAll();
 }
 
@@ -1330,7 +1521,10 @@ function renderHistory(entries) {
           ${g.moods.length ? `<div class="mood-tag">${[...new Set(g.moods)].join(' · ')}</div>` : ''}
           ${g.notes.length ? `<div class="entry-note">${g.notes.join(' · ')}</div>` : ''}
         </div>
-        <button class="entry-delete" onclick="deleteGroup('${g.date}')" title="Delete">×</button>
+        <div class="entry-actions">
+          <button class="entry-edit" onclick="openEditModal('${g.date}')" title="Edit">✎</button>
+          <button class="entry-delete" onclick="deleteGroup('${g.date}')" title="Delete">×</button>
+        </div>
       </div>
     `).join('');
     return;
@@ -1348,7 +1542,10 @@ function renderHistory(entries) {
         ${g.steps ? `<div class="mood-tag">👟 ${g.steps.toLocaleString()} steps</div>` : ''}
         ${g.notes.length ? `<div class="entry-note">${g.notes.join(' · ')}</div>` : ''}
       </div>
-      <button class="entry-delete" onclick="deleteGroup('${g.date}')" title="Delete">×</button>
+      <div class="entry-actions">
+        <button class="entry-edit" onclick="openEditModal('${g.date}')" title="Edit">✎</button>
+        <button class="entry-delete" onclick="deleteGroup('${g.date}')" title="Delete">×</button>
+      </div>
     </div>
   `).join('');
 }
