@@ -464,63 +464,6 @@
   .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
   .empty-state p { font-size: 14px; line-height: 1.5; }
 
-
-
-
-
-  /* ── HEALTH CARD ── */
-  .health-card {
-    background: var(--surface);
-    border: 1px solid var(--accent-border);
-    border-radius: 16px;
-    padding: 16px 20px;
-    margin-bottom: 16px;
-    display: none;
-  }
-
-  .health-card.visible { display: block; }
-
-  .health-card-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .health-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .health-stat {
-    background: var(--surface2);
-    border-radius: 10px;
-    padding: 12px;
-    text-align: center;
-  }
-
-  .health-stat-num {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--accent);
-    line-height: 1;
-    transition: color 0.3s;
-  }
-
-  .health-stat-label {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 4px;
-  }
-
   /* ── MOOD ── */
   .mood-chips { display: flex; gap: 8px; margin-top: 2px; }
 
@@ -819,26 +762,12 @@
   <button class="tab" onclick="switchTab('calendar')">Calendar</button>
   <button class="tab" onclick="switchTab('history')">History</button>
   <button class="tab" onclick="switchTab('weight')">Weight</button>
-  <button class="tab" onclick="switchTab('steps')">Steps</button>
 </div>
 
 <main>
 
   <!-- LOG TAB -->
   <div class="tab-content active" id="tab-log">
-    <div class="health-card" id="healthCard">
-      <div class="health-card-title">❤️ From Apple Health · Today</div>
-      <div class="health-stats">
-        <div class="health-stat">
-          <div class="health-stat-num" id="healthSteps">—</div>
-          <div class="health-stat-label">👟 Steps</div>
-        </div>
-        <div class="health-stat">
-          <div class="health-stat-num" id="healthMinutes">—</div>
-          <div class="health-stat-label">⏱ Active min</div>
-        </div>
-      </div>
-    </div>
     <div class="log-card">
       <div class="log-title" id="logTitle">What did you do today?</div>
 
@@ -867,6 +796,11 @@
           <div class="mood-chip" onclick="selectMood(this)" data-val="😐 Okay">😐 Okay</div>
           <div class="mood-chip" onclick="selectMood(this)" data-val="😴 Low">😴 Low</div>
         </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-label">Steps (optional)</div>
+        <input type="number" id="logSteps" placeholder="e.g. 8500" min="0" />
       </div>
 
       <div class="field-row">
@@ -953,20 +887,6 @@
     <div class="weight-list" id="weightList"></div>
   </div>
 
-  <!-- STEPS TAB -->
-  <div class="tab-content" id="tab-steps">
-    <div class="weight-banner">
-      <div class="weight-current-label">Today's steps</div>
-      <div>
-        <span class="weight-current-val" id="stepsCurrentVal">—</span>
-      </div>
-      <div class="weight-since" id="stepsSince"></div>
-    </div>
-
-    <div class="section-label">Daily History</div>
-    <div class="weight-list" id="stepsList"></div>
-  </div>
-
 </main>
 
 <div class="toast" id="toast"></div>
@@ -977,7 +897,6 @@ const SUPABASE_URL = 'https://zgmxaszvedyieshzmryv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_BXG1JU8IoKFiJdeSfzT2-g_yqjr7lA5';
 const TABLE = 'fitness_logs';
 const WEIGHT_TABLE = 'fitness_weight';
-const HEALTH_TABLE = 'fitness_health';
 
 const PEOPLE = {
   quena: {
@@ -1088,16 +1007,7 @@ async function init() {
   } else {
     weightMap = loadWeightLocal();
   }
-  // clear stale health cache so Supabase always wins
   localStorage.removeItem('fitness_health_v1');
-  // load health from Supabase BEFORE rendering
-  try {
-    const remoteHealthQ = await sbFetch(HEALTH_TABLE + '?person=eq.quena&order=date.desc&select=*').catch(() => []);
-    const remoteHealthC = await sbFetch(HEALTH_TABLE + '?person=eq.carlos&order=date.desc&select=*').catch(() => []);
-    if (remoteHealthQ && remoteHealthQ.length) healthMap.quena = remoteHealthQ;
-    if (remoteHealthC && remoteHealthC.length) healthMap.carlos = remoteHealthC;
-    localStorage.setItem('fitness_health_v1', JSON.stringify(healthMap));
-  } catch(e) { console.warn('Health load error:', e); }
   renderAll();
 
   } catch(e) { console.error('Init error:', e); renderAll(); }
@@ -1117,12 +1027,12 @@ function switchPerson(person) {
   document.querySelectorAll('.chip.selected').forEach(c => c.classList.remove('selected'));
   document.querySelectorAll('.mood-chip.selected').forEach(c => c.classList.remove('selected'));
   document.getElementById('logNote').value = '';
+  document.getElementById('logSteps').value = '';
   document.getElementById('logDate').value = fmtDate(new Date());
   const wdEl2 = document.getElementById('weightDate');
   if (wdEl2) wdEl2.value = fmtDate(new Date());
 
   renderAll();
-  renderSteps();
   renderWeight();
 }
 
@@ -1182,13 +1092,16 @@ async function logWorkout() {
   btn.textContent = 'Saving…';
 
   const mood = getSelectedMood();
+  const stepsVal = document.getElementById('logSteps').value;
+  const steps = stepsVal ? parseInt(stepsVal) : null;
   const entry = {
     id: Date.now().toString(),
     person: currentPerson,
     date,
     activities,
     note,
-    mood
+    mood,
+    steps
   };
 
   if (useSupabase) await saveToSupabase(entry);
@@ -1199,6 +1112,7 @@ async function logWorkout() {
   document.querySelectorAll('.chip.selected').forEach(c => c.classList.remove('selected'));
   document.querySelectorAll('.mood-chip.selected').forEach(c => c.classList.remove('selected'));
   document.getElementById('logNote').value = '';
+  document.getElementById('logSteps').value = '';
   document.getElementById('logDate').value = fmtDate(new Date());
   const wdEl2 = document.getElementById('weightDate');
   if (wdEl2) wdEl2.value = fmtDate(new Date());
@@ -1229,8 +1143,7 @@ function renderAll() {
     renderCalendar(entries);
     renderHistory(entries);
     if (currentTab === 'weight') renderWeight();
-    if (currentTab === 'steps') renderSteps();
-  } catch(e) { console.error('Render error:', e); }
+    } catch(e) { console.error('Render error:', e); }
 }
 
 // ── STATS ──────────────────────────────────────────────────────────────────────
@@ -1356,10 +1269,11 @@ function renderHistory(entries) {
 
   const byDate = {};
   entries.forEach(e => {
-    if (!byDate[e.date]) byDate[e.date] = { date: e.date, activities: [], notes: [], moods: [] };
+    if (!byDate[e.date]) byDate[e.date] = { date: e.date, activities: [], notes: [], moods: [], steps: null };
     byDate[e.date].activities.push(...e.activities);
     if (e.note) byDate[e.date].notes.push(e.note);
     if (e.mood) byDate[e.date].moods.push(e.mood);
+    if (e.steps) byDate[e.date].steps = e.steps;
   });
 
   const sorted = Object.values(byDate).sort((a,b) => b.date.localeCompare(a.date));
@@ -1406,6 +1320,7 @@ function renderHistory(entries) {
           ${[...new Set(g.activities)].map(a => `<span class="entry-tag">${a}</span>`).join('')}
         </div>
         ${g.moods.length ? `<div class="mood-tag">${[...new Set(g.moods)].join(' · ')}</div>` : ''}
+        ${g.steps ? `<div class="mood-tag">👟 ${g.steps.toLocaleString()} steps</div>` : ''}
         ${g.notes.length ? `<div class="entry-note">${g.notes.join(' · ')}</div>` : ''}
       </div>
       <button class="entry-delete" onclick="deleteGroup('${g.date}')" title="Delete">×</button>
@@ -1418,13 +1333,12 @@ function switchTab(name) {
   currentTab = name;
   localStorage.setItem('fitness_tab', name);
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['log','calendar','history','weight','steps'][i] === name);
+    t.classList.toggle('active', ['log','calendar','history','weight'][i] === name);
   });
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'calendar') renderCalendar(entriesMap[currentPerson]);
   if (name === 'weight') renderWeight();
-  if (name === 'steps') renderSteps();
 }
 
 
@@ -1450,7 +1364,7 @@ async function saveWeightToSupabase(entry) {
   try {
     await sbFetch(WEIGHT_TABLE, { method: 'POST', prefer: 'return=representation', body: JSON.stringify(entry) });
     return true;
-  } catch (e) { console.warn('Supabase weight save failed:', e); return false; }
+  } catch (e) { console.error('Supabase weight save failed:', e.message || e); return false; }
 }
 
 async function deleteWeightFromSupabase(id) {
@@ -1460,30 +1374,8 @@ async function deleteWeightFromSupabase(id) {
   } catch (e) { console.warn('Supabase weight delete failed:', e); return false; }
 }
 
-
-// ── HEALTH SUPABASE ────────────────────────────────────────────────────────────
-async function saveHealthToSupabase(entry) {
-  try {
-    // upsert so running shortcut twice on same day just updates
-    await sbFetch(HEALTH_TABLE + '?on_conflict=person,date', {
-      method: 'POST',
-      prefer: 'resolution=merge-duplicates,return=representation',
-      body: JSON.stringify(entry)
-    });
-    return true;
-  } catch (e) { console.warn('Supabase health save failed:', e); return false; }
-}
-
-async function loadHealthFromSupabase(person) {
-  try {
-    const data = await sbFetch(HEALTH_TABLE + '?person=eq.' + person + '&order=date.desc&select=*');
-    return data || [];
-  } catch (e) { console.warn('Supabase health load failed:', e); return []; }
-}
-
 // ── WEIGHT STATE ───────────────────────────────────────────────────────────────
 let weightMap = { quena: [], carlos: [] };
-let healthMap = { quena: [], carlos: [] }; // [{ id, date, value }]
 
 function saveWeightLocal() {
   localStorage.setItem('fitness_weight_v1', JSON.stringify(weightMap));
@@ -1503,7 +1395,10 @@ async function logWeight() {
   if (!val || val <= 0) { showToast('⚠️ Enter a valid weight'); return; }
 
   const entry = { id: Date.now().toString(), person: currentPerson, date, value: val, unit: weightUnit };
-  if (useSupabase) await saveWeightToSupabase(entry);
+  if (useSupabase) {
+    const ok = await saveWeightToSupabase(entry);
+    if (!ok) showToast('⚠️ Saved locally only — check connection');
+  }
   weightMap[currentPerson].push(entry);
   weightMap[currentPerson].sort((a,b) => b.date.localeCompare(a.date));
   saveWeightLocal();
@@ -1579,90 +1474,14 @@ function renderWeight() {
   }).join('');
 }
 
-
-// ── RENDER STEPS ───────────────────────────────────────────────────────────────
-function renderSteps() {
-  const entries = (healthMap[currentPerson] || []).slice().sort((a,b) => b.date.localeCompare(a.date));
-  const currentEl = document.getElementById('stepsCurrentVal');
-  const sinceEl   = document.getElementById('stepsSince');
-  const list      = document.getElementById('stepsList');
-  if (!currentEl) return;
-
-  if (!entries.length) {
-    currentEl.textContent = '—';
-    sinceEl.textContent = 'Automation syncs at 11pm daily';
-    list.innerHTML = '<div class="empty-state"><div class="icon">👟</div><p>No step data yet.<br>Automation syncs tonight at 11pm.</p></div>';
-    return;
-  }
-
-  const today = fmtDate(new Date());
-  const todayEntry = entries.find(e => e.date === today);
-  currentEl.textContent = todayEntry ? parseInt(todayEntry.steps).toLocaleString() : '—';
-
-  const avg = Math.round(entries.reduce((s,e) => s + (parseInt(e.steps)||0), 0) / entries.length);
-  sinceEl.innerHTML = `Avg <span>${avg.toLocaleString()}</span> steps/day`;
-
-  list.innerHTML = entries.map(e => `
-    <div class="weight-row">
-      <div class="weight-row-date">${fmtDisplay(e.date)}</div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <span class="weight-row-val">👟 ${parseInt(e.steps||0).toLocaleString()}</span>
-        <span style="font-size:13px;color:var(--muted);">⏱ ${e.minutes||0} min</span>
-      </div>
-    </div>
-  `).join('');
-}
-
 function dismissReminder() {
   const key = 'weight_reminder_dismissed_' + fmtDate(new Date());
   localStorage.setItem(key, '1');
   document.getElementById('reminderBanner').style.display = 'none';
 }
 
-
-// ── APPLE HEALTH URL PARAMS ────────────────────────────────────────────────────
-async function readHealthParams() {
-  const params = new URLSearchParams(window.location.search);
-  const steps = params.get('steps');
-  const minutes = params.get('minutes');
-  const person = params.get('person') || 'quena';
-
-  if (steps || minutes) {
-    const today = fmtDate(new Date());
-    const entry = {
-      id: person + '_' + today,
-      person,
-      date: today,
-      steps: parseInt(steps) || 0,
-      minutes: parseInt(minutes) || 0
-    };
-
-    // Save to Supabase
-    if (useSupabase) await saveHealthToSupabase(entry);
-
-    // Save to localStorage
-    const existing = healthMap[person].findIndex(e => e.date === today);
-    if (existing >= 0) healthMap[person][existing] = entry;
-    else healthMap[person].unshift(entry);
-    localStorage.setItem('fitness_health_v1', JSON.stringify(healthMap));
-
-    // Show card
-    showHealthCard(steps, minutes);
-  }
-}
-
-function showHealthCard(steps, minutes) {
-  const card = document.getElementById('healthCard');
-  if (!card) return;
-  if (steps || minutes) {
-    card.classList.add('visible');
-    if (steps) document.getElementById('healthSteps').textContent = parseInt(steps).toLocaleString();
-    if (minutes) document.getElementById('healthMinutes').textContent = parseInt(minutes);
-  }
-}
-
 // ── START ──────────────────────────────────────────────────────────────────────
-init().then(() => readHealthParams());
+init();
 </script>
 </div></body>
 </html>
