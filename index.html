@@ -560,6 +560,42 @@
   }
 
   /* ── WEIGHT TAB ── */
+
+  .section-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 28px 0 16px;
+  }
+
+  .collapsible-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 4px 0;
+    margin-bottom: 12px;
+  }
+
+  .collapse-arrow {
+    color: var(--muted);
+    font-size: 12px;
+    transition: transform 0.2s;
+  }
+
+  .collapse-arrow.collapsed { transform: rotate(-90deg); }
+
+  .collapsible-content {
+    display: block;
+  }
+
+  .collapsible-content.collapsed { display: none; }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 14px;
+  }
   .weight-banner {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -825,6 +861,28 @@
 
   <!-- LOG TAB -->
   <div class="tab-content active" id="tab-log">
+    <div id="waterReminderBanner" style="display:none">
+      <div class="reminder-banner">
+        <div class="reminder-icon">💧</div>
+        <div class="reminder-text">
+          <strong>Drink water!</strong>
+          <span>Quick reminder to stay hydrated today.</span>
+        </div>
+        <button class="reminder-dismiss" onclick="dismissDailyReminder('water')" title="Dismiss">×</button>
+      </div>
+    </div>
+
+    <div id="vitaminReminderBanner" style="display:none">
+      <div class="reminder-banner">
+        <div class="reminder-icon">💊</div>
+        <div class="reminder-text">
+          <strong>Take your vitamins!</strong>
+          <span>Don't forget your daily vitamins.</span>
+        </div>
+        <button class="reminder-dismiss" onclick="dismissDailyReminder('vitamin')" title="Dismiss">×</button>
+      </div>
+    </div>
+
     <div class="log-card">
       <div class="log-title" id="logTitle">What did you do today?</div>
 
@@ -941,8 +999,86 @@
       </div>
     </div>
 
+    <!-- BODY COMPOSITION -->
+    <div class="section-divider"></div>
+    <div class="collapsible-header" onclick="toggleSection('bodyComp')">
+      <span class="section-label" style="margin-bottom:0;">Body Composition</span>
+      <span class="collapse-arrow" id="bodyCompArrow">▾</span>
+    </div>
+    <div class="collapsible-content" id="bodyCompSection">
+      <div class="weight-form">
+        <div class="field-row">
+          <div class="field-label">Date</div>
+          <input type="date" id="bodyCompDate" />
+        </div>
+        <div class="metric-grid">
+          <div class="field-row" style="margin-bottom:0;">
+            <div class="field-label">BMI</div>
+            <input type="number" id="bmiVal" placeholder="0.0" step="0.1" min="0" />
+          </div>
+          <div class="field-row" style="margin-bottom:0;">
+            <div class="field-label">Body Fat %</div>
+            <input type="number" id="fatVal" placeholder="0.0" step="0.1" min="0" />
+          </div>
+          <div class="field-row" style="margin-bottom:0;">
+            <div class="field-label">Muscle %</div>
+            <input type="number" id="muscleVal" placeholder="0.0" step="0.1" min="0" />
+          </div>
+          <div class="field-row" style="margin-bottom:0;">
+            <div class="field-label">Visceral Fat</div>
+            <input type="number" id="viscFatVal" placeholder="0.0" step="0.1" min="0" />
+          </div>
+        </div>
+        <button class="btn-log" style="margin-top:14px;" onclick="logBodyComp()">Save</button>
+      </div>
+    </div>
+
+    <!-- MEASUREMENTS -->
+    <div class="section-divider"></div>
+    <div class="collapsible-header" onclick="toggleSection('measurements')">
+      <span class="section-label" style="margin-bottom:0;">Measurements (cm)</span>
+      <span class="collapse-arrow" id="measurementsArrow">▾</span>
+    </div>
+    <div class="collapsible-content" id="measurementsSection">
+      <div class="weight-form">
+        <div class="field-row">
+          <div class="field-label">Date</div>
+          <input type="date" id="measureDate" />
+        </div>
+        <div class="metric-grid">
+          <div class="field-row" style="margin-bottom:0;">
+            <div class="field-label">Arm</div>
+            <input type="number" id="armVal" placeholder="0.0" step="0.1" min="0" />
+          </div>
+          <div class="field-row" style="margin-bottom:0;">
+            <div class="field-label">Chest</div>
+            <input type="number" id="chestVal" placeholder="0.0" step="0.1" min="0" />
+          </div>
+          <div class="field-row" style="margin-bottom:0;">
+            <div class="field-label">Waist</div>
+            <input type="number" id="waistVal" placeholder="0.0" step="0.1" min="0" />
+          </div>
+          <div class="field-row" style="margin-bottom:0;">
+            <div class="field-label">Hip</div>
+            <input type="number" id="hipVal" placeholder="0.0" step="0.1" min="0" />
+          </div>
+          <div class="field-row" style="margin-bottom:0;">
+            <div class="field-label">Thigh</div>
+            <input type="number" id="thighVal" placeholder="0.0" step="0.1" min="0" />
+          </div>
+          <div class="field-row" style="margin-bottom:0;">
+            <div class="field-label">Calf</div>
+            <input type="number" id="calfVal" placeholder="0.0" step="0.1" min="0" />
+          </div>
+        </div>
+        <button class="btn-log" style="margin-top:14px;" onclick="logMeasurements()">Save</button>
+      </div>
+    </div>
+
+    <!-- UNIFIED HISTORY -->
+    <div class="section-divider"></div>
     <div class="section-label">History</div>
-    <div class="weight-list" id="weightList"></div>
+    <div class="weight-list" id="allMetricsList"></div>
   </div>
 
 </main>
@@ -1000,6 +1136,8 @@ const SUPABASE_URL = 'https://zgmxaszvedyieshzmryv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_BXG1JU8IoKFiJdeSfzT2-g_yqjr7lA5';
 const TABLE = 'fitness_logs';
 const WEIGHT_TABLE = 'fitness_weight';
+const BODYCOMP_TABLE = 'fitness_bodycomp';
+const MEASURE_TABLE = 'fitness_measurements';
 
 const PEOPLE = {
   quena: {
@@ -1111,6 +1249,10 @@ async function init() {
   document.getElementById('logDate').value = fmtDate(today);
   const wdEl = document.getElementById('weightDate');
   if (wdEl) wdEl.value = fmtDate(today);
+  const bcEl = document.getElementById('bodyCompDate');
+  if (bcEl) bcEl.value = fmtDate(today);
+  const mEl = document.getElementById('measureDate');
+  if (mEl) mEl.value = fmtDate(today);
 
   const remote = await loadAllFromSupabase();
   if (remote !== null) {
@@ -1137,6 +1279,29 @@ async function init() {
   } else {
     weightMap = loadWeightLocal();
   }
+
+  // Load body composition from Supabase
+  const remoteBodyComp = await loadBodyCompFromSupabase();
+  if (remoteBodyComp !== null) {
+    Object.keys(PEOPLE).forEach(p => {
+      bodyCompMap[p] = remoteBodyComp.filter(e => e.person === p);
+    });
+    saveBodyCompLocal();
+  } else {
+    bodyCompMap = loadBodyCompLocal();
+  }
+
+  // Load measurements from Supabase
+  const remoteMeasure = await loadMeasureFromSupabase();
+  if (remoteMeasure !== null) {
+    Object.keys(PEOPLE).forEach(p => {
+      measureMap[p] = remoteMeasure.filter(e => e.person === p);
+    });
+    saveMeasureLocal();
+  } else {
+    measureMap = loadMeasureLocal();
+  }
+
   localStorage.removeItem('fitness_health_v1');
   renderAll();
 
@@ -1173,6 +1338,9 @@ function switchPerson(person) {
 
   renderAll();
   renderWeight();
+  renderBodyComp();
+  renderMeasurements();
+  renderAllMetricsHistory();
 }
 
 function applyTheme(person) {
@@ -1358,7 +1526,8 @@ function renderAll() {
     renderStreak(entries);
     renderCalendar(entries);
     renderHistory(entries);
-    if (currentTab === 'weight') renderWeight();
+    renderDailyReminders();
+    if (currentTab === 'weight') { renderWeight(); renderBodyComp(); renderMeasurements(); renderAllMetricsHistory(); }
     } catch(e) { console.error('Render error:', e); }
 }
 
@@ -1560,7 +1729,7 @@ function switchTab(name) {
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'calendar') renderCalendar(entriesMap[currentPerson]);
-  if (name === 'weight') renderWeight();
+  if (name === 'weight') { renderWeight(); renderBodyComp(); renderMeasurements(); renderAllMetricsHistory(); }
 }
 
 
@@ -1596,9 +1765,59 @@ async function deleteWeightFromSupabase(id) {
   } catch (e) { console.warn('Supabase weight delete failed:', e); return false; }
 }
 
+// ── BODY COMPOSITION SUPABASE ──────────────────────────────────────────────────
+async function loadBodyCompFromSupabase() {
+  try {
+    const data = await sbFetch(BODYCOMP_TABLE + '?order=date.desc&select=*');
+    return data || [];
+  } catch (e) { console.warn('Supabase bodycomp load failed:', e); return null; }
+}
+
+async function saveBodyCompToSupabase(entry) {
+  try {
+    await sbFetch(BODYCOMP_TABLE, { method: 'POST', prefer: 'return=representation', body: JSON.stringify(entry) });
+    return true;
+  } catch (e) { console.error('Supabase bodycomp save failed:', e.message || e); return false; }
+}
+
+async function deleteBodyCompFromSupabase(id) {
+  try {
+    await sbFetch(BODYCOMP_TABLE + '?id=eq.' + id, { method: 'DELETE' });
+    return true;
+  } catch (e) { console.warn('Supabase bodycomp delete failed:', e); return false; }
+}
+
+// ── MEASUREMENTS SUPABASE ──────────────────────────────────────────────────────
+async function loadMeasureFromSupabase() {
+  try {
+    const data = await sbFetch(MEASURE_TABLE + '?order=date.desc&select=*');
+    return data || [];
+  } catch (e) { console.warn('Supabase measurements load failed:', e); return null; }
+}
+
+async function saveMeasureToSupabase(entry) {
+  try {
+    await sbFetch(MEASURE_TABLE, { method: 'POST', prefer: 'return=representation', body: JSON.stringify(entry) });
+    return true;
+  } catch (e) { console.error('Supabase measurements save failed:', e.message || e); return false; }
+}
+
+async function deleteMeasureFromSupabase(id) {
+  try {
+    await sbFetch(MEASURE_TABLE + '?id=eq.' + id, { method: 'DELETE' });
+    return true;
+  } catch (e) { console.warn('Supabase measurements delete failed:', e); return false; }
+}
+
 // ── WEIGHT STATE ───────────────────────────────────────────────────────────────
 let weightMap = {};
 Object.keys(PEOPLE).forEach(p => weightMap[p] = []);
+
+let bodyCompMap = {};
+Object.keys(PEOPLE).forEach(p => bodyCompMap[p] = []);
+
+let measureMap = {};
+Object.keys(PEOPLE).forEach(p => measureMap[p] = []);
 
 function saveWeightLocal() {
   localStorage.setItem('fitness_weight_v1', JSON.stringify(weightMap));
@@ -1607,6 +1826,28 @@ function saveWeightLocal() {
 function loadWeightLocal() {
   const raw = localStorage.getItem('fitness_weight_v1');
   return raw ? JSON.parse(raw) : { quena: [], carlos: [] };
+}
+
+function saveBodyCompLocal() {
+  localStorage.setItem('fitness_bodycomp_v1', JSON.stringify(bodyCompMap));
+}
+
+function loadBodyCompLocal() {
+  const raw = localStorage.getItem('fitness_bodycomp_v1');
+  const parsed = raw ? JSON.parse(raw) : {};
+  Object.keys(PEOPLE).forEach(p => { if (!parsed[p]) parsed[p] = []; });
+  return parsed;
+}
+
+function saveMeasureLocal() {
+  localStorage.setItem('fitness_measurements_v1', JSON.stringify(measureMap));
+}
+
+function loadMeasureLocal() {
+  const raw = localStorage.getItem('fitness_measurements_v1');
+  const parsed = raw ? JSON.parse(raw) : {};
+  Object.keys(PEOPLE).forEach(p => { if (!parsed[p]) parsed[p] = []; });
+  return parsed;
 }
 
 // ── WEIGHT LOG ─────────────────────────────────────────────────────────────────
@@ -1631,6 +1872,7 @@ async function logWeight() {
 
   showToast('⚖️ Weight saved!');
   renderWeight();
+  renderAllMetricsHistory();
 }
 
 async function deleteWeight(id) {
@@ -1638,12 +1880,114 @@ async function deleteWeight(id) {
   weightMap[currentPerson] = weightMap[currentPerson].filter(e => e.id !== id);
   saveWeightLocal();
   renderWeight();
+  renderAllMetricsHistory();
+}
+
+// ── BODY COMPOSITION LOG ───────────────────────────────────────────────────────
+async function logBodyComp() {
+  const date = document.getElementById('bodyCompDate').value;
+  const bmi = document.getElementById('bmiVal').value;
+  const fat = document.getElementById('fatVal').value;
+  const muscle = document.getElementById('muscleVal').value;
+  const viscFat = document.getElementById('viscFatVal').value;
+
+  if (!date) { showToast('⚠️ Choose a date'); return; }
+  if (!bmi && !fat && !muscle && !viscFat) { showToast('⚠️ Enter at least one value'); return; }
+
+  const entry = {
+    id: Date.now().toString(),
+    person: currentPerson,
+    date,
+    bmi: bmi ? parseFloat(bmi) : null,
+    fat: fat ? parseFloat(fat) : null,
+    muscle: muscle ? parseFloat(muscle) : null,
+    visceral_fat: viscFat ? parseFloat(viscFat) : null
+  };
+
+  if (useSupabase) {
+    const ok = await saveBodyCompToSupabase(entry);
+    if (!ok) showToast('⚠️ Saved locally only — check connection');
+  }
+  bodyCompMap[currentPerson].push(entry);
+  bodyCompMap[currentPerson].sort((a,b) => b.date.localeCompare(a.date));
+  saveBodyCompLocal();
+
+  ['bmiVal','fatVal','muscleVal','viscFatVal'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('bodyCompDate').value = fmtDate(new Date());
+
+  showToast('✅ Body composition saved!');
+  renderBodyComp();
+  renderAllMetricsHistory();
+}
+
+async function deleteBodyComp(id) {
+  if (useSupabase) await deleteBodyCompFromSupabase(id);
+  bodyCompMap[currentPerson] = bodyCompMap[currentPerson].filter(e => e.id !== id);
+  saveBodyCompLocal();
+  renderBodyComp();
+  renderAllMetricsHistory();
+}
+
+// ── MEASUREMENTS LOG ───────────────────────────────────────────────────────────
+async function logMeasurements() {
+  const date = document.getElementById('measureDate').value;
+  const arm = document.getElementById('armVal').value;
+  const chest = document.getElementById('chestVal').value;
+  const waist = document.getElementById('waistVal').value;
+  const hip = document.getElementById('hipVal').value;
+  const thigh = document.getElementById('thighVal').value;
+  const calf = document.getElementById('calfVal').value;
+
+  if (!date) { showToast('⚠️ Choose a date'); return; }
+  if (!arm && !chest && !waist && !hip && !thigh && !calf) { showToast('⚠️ Enter at least one value'); return; }
+
+  const entry = {
+    id: Date.now().toString(),
+    person: currentPerson,
+    date,
+    arm: arm ? parseFloat(arm) : null,
+    chest: chest ? parseFloat(chest) : null,
+    waist: waist ? parseFloat(waist) : null,
+    hip: hip ? parseFloat(hip) : null,
+    thigh: thigh ? parseFloat(thigh) : null,
+    calf: calf ? parseFloat(calf) : null
+  };
+
+  if (useSupabase) {
+    const ok = await saveMeasureToSupabase(entry);
+    if (!ok) showToast('⚠️ Saved locally only — check connection');
+  }
+  measureMap[currentPerson].push(entry);
+  measureMap[currentPerson].sort((a,b) => b.date.localeCompare(a.date));
+  saveMeasureLocal();
+
+  ['armVal','chestVal','waistVal','hipVal','thighVal','calfVal'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('measureDate').value = fmtDate(new Date());
+
+  showToast('✅ Measurements saved!');
+  renderMeasurements();
+  renderAllMetricsHistory();
+}
+
+async function deleteMeasurement(id) {
+  if (useSupabase) await deleteMeasureFromSupabase(id);
+  measureMap[currentPerson] = measureMap[currentPerson].filter(e => e.id !== id);
+  saveMeasureLocal();
+  renderMeasurements();
+  renderAllMetricsHistory();
+}
+
+// ── COLLAPSIBLE SECTIONS ───────────────────────────────────────────────────────
+function toggleSection(name) {
+  const section = document.getElementById(name + 'Section');
+  const arrow = document.getElementById(name + 'Arrow');
+  section.classList.toggle('collapsed');
+  arrow.classList.toggle('collapsed');
 }
 
 // ── RENDER WEIGHT ──────────────────────────────────────────────────────────────
 function renderWeight() {
   const entries = weightMap[currentPerson];
-  const list = document.getElementById('weightList');
   const currentEl = document.getElementById('weightCurrentVal');
   const sinceEl   = document.getElementById('weightSince');
 
@@ -1658,7 +2002,6 @@ function renderWeight() {
   if (!entries.length) {
     currentEl.textContent = '—';
     sinceEl.textContent = '';
-    list.innerHTML = '<div class="empty-state"><div class="icon">⚖️</div><p>No weight entries yet.<br>Log your first one above!</p></div>';
     return;
   }
 
@@ -1674,24 +2017,73 @@ function renderWeight() {
   } else {
     sinceEl.textContent = `Logged on ${fmtDisplay(latest.date)}`;
   }
+}
 
-  list.innerHTML = entries.map((e, i) => {
-    const prev = entries[i + 1];
-    let deltaHtml = '';
-    if (prev) {
-      const d = (e.value - prev.value).toFixed(1);
-      const cls = d > 0 ? 'delta-up' : d < 0 ? 'delta-down' : 'delta-same';
-      const sign = d > 0 ? '+' : '';
-      deltaHtml = `<span class="weight-row-delta ${cls}">${sign}${d}</span>`;
+// ── RENDER BODY COMPOSITION ────────────────────────────────────────────────────
+function renderBodyComp() {
+  // form-only now; history shown in unified renderAllMetricsHistory()
+}
+
+// ── RENDER MEASUREMENTS ────────────────────────────────────────────────────────
+function renderMeasurements() {
+  // form-only now; history shown in unified renderAllMetricsHistory()
+}
+
+// ── RENDER UNIFIED HISTORY (weight + body comp + measurements) ────────────────
+function renderAllMetricsHistory() {
+  const list = document.getElementById('allMetricsList');
+  if (!list) return;
+
+  const weights = (weightMap[currentPerson] || []).map(e => ({ ...e, _type: 'weight' }));
+  const bodyComps = (bodyCompMap[currentPerson] || []).map(e => ({ ...e, _type: 'bodycomp' }));
+  const measures = (measureMap[currentPerson] || []).map(e => ({ ...e, _type: 'measure' }));
+
+  const all = [...weights, ...bodyComps, ...measures].sort((a, b) => b.date.localeCompare(a.date));
+
+  if (!all.length) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">📊</div><p>No entries yet.<br>Log weight, body composition, or measurements above!</p></div>';
+    return;
+  }
+
+  list.innerHTML = all.map(e => {
+    let label = '';
+    let valueHtml = '';
+    let deleteFn = '';
+
+    if (e._type === 'weight') {
+      label = '⚖️ Weight';
+      valueHtml = `${displayWeight(e.value)} ${e.unit || weightUnit}`;
+      deleteFn = `deleteWeight('${e.id}')`;
+    } else if (e._type === 'bodycomp') {
+      label = '📊 Body Comp';
+      const parts = [];
+      if (e.bmi) parts.push(`BMI ${e.bmi}`);
+      if (e.fat) parts.push(`Fat ${e.fat}%`);
+      if (e.muscle) parts.push(`Muscle ${e.muscle}%`);
+      if (e.visceral_fat) parts.push(`Visceral ${e.visceral_fat}`);
+      valueHtml = parts.join(' · ');
+      deleteFn = `deleteBodyComp('${e.id}')`;
+    } else {
+      label = '📏 Measurements';
+      const parts = [];
+      if (e.arm) parts.push(`Arm ${e.arm}`);
+      if (e.chest) parts.push(`Chest ${e.chest}`);
+      if (e.waist) parts.push(`Waist ${e.waist}`);
+      if (e.hip) parts.push(`Hip ${e.hip}`);
+      if (e.thigh) parts.push(`Thigh ${e.thigh}`);
+      if (e.calf) parts.push(`Calf ${e.calf}`);
+      valueHtml = parts.join(' · ');
+      deleteFn = `deleteMeasurement('${e.id}')`;
     }
+
     return `
       <div class="weight-row">
-        <div class="weight-row-date">${fmtDisplay(e.date)}</div>
-        <div style="display:flex;align-items:center;gap:4px;">
-          <span class="weight-row-val">${displayWeight(e.value)} ${e.unit || weightUnit}</span>
-          ${deltaHtml}
+        <div>
+          <div class="weight-row-date">${fmtDisplay(e.date)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${label}</div>
         </div>
-        <button class="weight-delete" onclick="deleteWeight('${e.id}')" title="Delete">×</button>
+        <div style="font-size:13px;color:var(--text);text-align:right;flex:1;padding:0 10px;">${valueHtml}</div>
+        <button class="weight-delete" onclick="${deleteFn}" title="Delete">×</button>
       </div>`;
   }).join('');
 }
@@ -1700,6 +2092,30 @@ function dismissReminder() {
   const key = 'weight_reminder_dismissed_' + fmtDate(new Date());
   localStorage.setItem(key, '1');
   document.getElementById('reminderBanner').style.display = 'none';
+}
+
+// ── DAILY REMINDERS (water / vitamins) ────────────────────────────────────────
+function renderDailyReminders() {
+  const today = fmtDate(new Date());
+  const types = [
+    { key: 'water', bannerId: 'waterReminderBanner' },
+    { key: 'vitamin', bannerId: 'vitaminReminderBanner' }
+  ];
+
+  types.forEach(({ key, bannerId }) => {
+    const dismissKey = `daily_${key}_dismissed_${currentPerson}_${today}`;
+    const dismissed = localStorage.getItem(dismissKey);
+    const banner = document.getElementById(bannerId);
+    if (banner) banner.style.display = dismissed ? 'none' : 'block';
+  });
+}
+
+function dismissDailyReminder(key) {
+  const today = fmtDate(new Date());
+  const dismissKey = `daily_${key}_dismissed_${currentPerson}_${today}`;
+  localStorage.setItem(dismissKey, '1');
+  const bannerId = key === 'water' ? 'waterReminderBanner' : 'vitaminReminderBanner';
+  document.getElementById(bannerId).style.display = 'none';
 }
 
 // ── START ──────────────────────────────────────────────────────────────────────
