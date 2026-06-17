@@ -973,6 +973,40 @@
     line-height: 1.6;
   }
 
+  .squad-progress-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .squad-progress-card.is-best { border-color: rgba(74,222,128,0.3); background: linear-gradient(135deg, var(--surface), rgba(74,222,128,0.06)); }
+
+  .squad-progress-info { flex: 1; }
+
+  .squad-progress-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .squad-progress-tag {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--surface2);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+  }
+
+  .progress-down { color: #6aab7a; }
+  .progress-up { color: #c0776a; }
+  .progress-same { color: var(--muted); }
+
   /* ── TOAST ── */
   .toast {
     position: fixed;
@@ -1273,8 +1307,11 @@
 
     <div class="squad-list" id="squadList"></div>
 
+    <div class="section-label" style="margin-top:24px;">Progress this <span id="squadProgressPeriodLabel">week</span></div>
+    <div class="squad-list" id="squadProgressList"></div>
+
     <div class="section-label" style="margin-top:24px;">How it works</div>
-    <p class="squad-explainer">Activity counts both days active and total workouts logged. Whoever has the least activity for the period gets a fun little dare — it changes each week, all in good fun, not a competition!</p>
+    <p class="squad-explainer">Activity counts both days active and total workouts logged. Whoever has the least activity for the period gets a fun little dare — it changes each week, all in good fun, not a competition! Progress compares each person's first and latest entry for the period — just for fun.</p>
   </div>
 
 </main>
@@ -1979,8 +2016,13 @@ function renderSquad() {
 
   const stats = Object.keys(PEOPLE).map(key => {
     const entries = (entriesMap[key] || []).filter(e => e.date >= startStr);
-    const daysActive = new Set(entries.map(e => e.date)).size;
-    const totalWorkouts = entries.length;
+    const uniqueDates = new Set(entries.map(e => e.date));
+    const daysActive = uniqueDates.size;
+    // count total distinct activities logged across the period (not raw rows,
+    // since multiple log entries on the same day get merged in History too)
+    const allActivities = new Set();
+    entries.forEach(e => e.activities.forEach(a => allActivities.add(`${e.date}_${a}`)));
+    const totalWorkouts = allActivities.size;
     return { key, name: PEOPLE[key].name, daysActive, totalWorkouts };
   });
 
@@ -2035,6 +2077,81 @@ function renderSquad() {
           <div class="squad-stats">${s.daysActive} day${s.daysActive === 1 ? '' : 's'} active · ${s.totalWorkouts} workout${s.totalWorkouts === 1 ? '' : 's'} logged</div>
         </div>
         <div class="squad-badge">${badge}</div>
+      </div>`;
+  }).join('');
+
+  renderSquadProgress(startStr);
+}
+
+// ── SQUAD PROGRESS (weight / fat / waist) ──────────────────────────────────────
+function renderSquadProgress(startStr) {
+  const periodLabelEl = document.getElementById('squadProgressPeriodLabel');
+  if (periodLabelEl) periodLabelEl.textContent = squadPeriod;
+
+  const list = document.getElementById('squadProgressList');
+  if (!list) return;
+
+  const progress = Object.keys(PEOPLE).map(key => {
+    const weights = (weightMap[key] || []).filter(e => e.date >= startStr).sort((a,b) => a.date.localeCompare(b.date));
+    const bodyComps = (bodyCompMap[key] || []).filter(e => e.date >= startStr && e.fat != null).sort((a,b) => a.date.localeCompare(b.date));
+    const measures = (measureMap[key] || []).filter(e => e.date >= startStr && e.waist != null).sort((a,b) => a.date.localeCompare(b.date));
+
+    const result = { key, name: PEOPLE[key].name, hasData: false };
+
+    if (weights.length >= 2) {
+      result.weightDelta = (weights[weights.length - 1].value - weights[0].value);
+      result.hasData = true;
+    }
+    if (bodyComps.length >= 2) {
+      result.fatDelta = (bodyComps[bodyComps.length - 1].fat - bodyComps[0].fat);
+      result.hasData = true;
+    }
+    if (measures.length >= 2) {
+      result.waistDelta = (measures[measures.length - 1].waist - measures[0].waist);
+      result.hasData = true;
+    }
+
+    return result;
+  }).filter(r => r.hasData);
+
+  if (!progress.length) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">📈</div><p>Not enough weight, body fat, or waist entries yet this ${squadPeriod} to compare progress.</p></div>`;
+    return;
+  }
+
+  // determine "most improved": lowest combined score where weight/fat/waist going down is good
+  const scored = progress.map(p => {
+    let score = 0;
+    if (p.weightDelta != null) score += p.weightDelta;
+    if (p.fatDelta != null) score += p.fatDelta;
+    if (p.waistDelta != null) score += p.waistDelta;
+    return { ...p, score };
+  });
+  scored.sort((a, b) => a.score - b.score);
+  const bestKey = scored[0].key;
+
+  list.innerHTML = scored.map(p => {
+    const tags = [];
+    const tagHtml = (label, delta, unit) => {
+      if (delta == null) return '';
+      const cls = delta < 0 ? 'progress-down' : delta > 0 ? 'progress-up' : 'progress-same';
+      const sign = delta > 0 ? '+' : '';
+      return `<span class="squad-progress-tag ${cls}">${label} ${sign}${delta.toFixed(1)}${unit}</span>`;
+    };
+    tags.push(tagHtml('⚖️ Weight', p.weightDelta, ' kg'));
+    tags.push(tagHtml('📊 Fat', p.fatDelta, '%'));
+    tags.push(tagHtml('📏 Waist', p.waistDelta, ' cm'));
+
+    const pInfo = PEOPLE[p.key];
+    const isBest = p.key === bestKey;
+
+    return `
+      <div class="squad-progress-card ${isBest ? 'is-best' : ''}">
+        <div class="squad-avatar" style="background:${pInfo.accentGlow};color:${pInfo.accent};">${pInfo.initial}</div>
+        <div class="squad-progress-info">
+          <div class="squad-name">${pInfo.name}${isBest ? ' 🌟' : ''}</div>
+          <div class="squad-progress-metrics">${tags.filter(Boolean).join('')}</div>
+        </div>
       </div>`;
   }).join('');
 }
