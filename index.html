@@ -1311,7 +1311,7 @@
     <div class="squad-list" id="squadProgressList"></div>
 
     <div class="section-label" style="margin-top:24px;">How it works</div>
-    <p class="squad-explainer">Activity counts both days active and total workouts logged. Whoever has the least activity for the period gets a fun little dare — it changes each week, all in good fun, not a competition! Progress compares each person's first and latest entry for the period — just for fun.</p>
+    <p class="squad-explainer">Activity is based on days active — logging multiple activities on the same day still counts as one active day. Whoever has the least activity for the period gets a fun little dare — it changes each week, all in good fun, not a competition! Progress compares each person's first and latest entry for the period — just for fun.</p>
   </div>
 
 </main>
@@ -2018,11 +2018,9 @@ function renderSquad() {
     const entries = (entriesMap[key] || []).filter(e => e.date >= startStr);
     const uniqueDates = new Set(entries.map(e => e.date));
     const daysActive = uniqueDates.size;
-    // count total distinct activities logged across the period (not raw rows,
-    // since multiple log entries on the same day get merged in History too)
-    const allActivities = new Set();
-    entries.forEach(e => e.activities.forEach(a => allActivities.add(`${e.date}_${a}`)));
-    const totalWorkouts = allActivities.size;
+    // "workouts logged" = number of distinct days with an activity logged.
+    // A day with multiple activities (e.g. walk + stretch) still counts as one workout session.
+    const totalWorkouts = daysActive;
     return { key, name: PEOPLE[key].name, daysActive, totalWorkouts };
   });
 
@@ -2074,7 +2072,7 @@ function renderSquad() {
         <div class="squad-avatar" style="background:${p.accentGlow};color:${p.accent};">${p.initial}</div>
         <div class="squad-info">
           <div class="squad-name">${p.name}</div>
-          <div class="squad-stats">${s.daysActive} day${s.daysActive === 1 ? '' : 's'} active · ${s.totalWorkouts} workout${s.totalWorkouts === 1 ? '' : 's'} logged</div>
+          <div class="squad-stats">${s.daysActive} day${s.daysActive === 1 ? '' : 's'} active this ${squadPeriod}</div>
         </div>
         <div class="squad-badge">${badge}</div>
       </div>`;
