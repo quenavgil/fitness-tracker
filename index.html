@@ -838,6 +838,141 @@
     flex-shrink: 0;
   }
 
+  /* ── SQUAD TAB ── */
+  .log-squad-callout {
+    background: var(--surface);
+    border: 1px solid var(--accent-border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: opacity 0.15s;
+  }
+
+  .log-squad-callout:hover { opacity: 0.85; }
+  .log-squad-callout:empty { display: none; }
+
+  .squad-callout {
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border: 1px solid var(--accent-border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+
+  .squad-callout-icon { font-size: 32px; margin-bottom: 8px; }
+
+  .squad-callout-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .squad-callout-sub {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .squad-period-toggle {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+    margin-bottom: 16px;
+  }
+
+  .squad-period-btn {
+    flex: 1;
+    padding: 8px 0;
+    text-align: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 7px;
+    border: none;
+    background: none;
+    transition: all 0.18s;
+  }
+
+  .squad-period-btn.active {
+    background: var(--surface);
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+  }
+
+  .squad-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .squad-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .squad-card.is-top { border-color: rgba(234,179,8,0.4); background: linear-gradient(135deg, var(--surface), rgba(234,179,8,0.06)); }
+  .squad-card.is-last { border-color: rgba(248,113,113,0.3); }
+
+  .squad-rank {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--muted);
+    width: 28px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .squad-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .squad-info { flex: 1; }
+
+  .squad-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .squad-stats {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .squad-badge {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .squad-explainer {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
   /* ── TOAST ── */
   .toast {
     position: fixed;
@@ -898,6 +1033,7 @@
   <button class="tab" onclick="switchTab('calendar')">Calendar</button>
   <button class="tab" onclick="switchTab('history')">History</button>
   <button class="tab" onclick="switchTab('weight')">Weight</button>
+  <button class="tab" onclick="switchTab('squad')">Squad</button>
 </div>
 
 <main>
@@ -925,6 +1061,8 @@
         <button class="reminder-dismiss" onclick="dismissDailyReminder('vitamin')" title="Dismiss">×</button>
       </div>
     </div>
+
+    <div id="logSquadCallout" class="log-squad-callout" onclick="switchTab('squad')"></div>
 
     <div class="log-card">
       <div class="log-title" id="logTitle">What did you do today?</div>
@@ -1122,6 +1260,21 @@
     <div class="section-divider"></div>
     <div class="section-label">History</div>
     <div class="weight-list" id="allMetricsList"></div>
+  </div>
+
+  <!-- SQUAD TAB -->
+  <div class="tab-content" id="tab-squad">
+    <div class="squad-callout" id="squadCallout"></div>
+
+    <div class="squad-period-toggle">
+      <button class="squad-period-btn active" id="squadPeriodWeek" onclick="setSquadPeriod('week')">This Week</button>
+      <button class="squad-period-btn" id="squadPeriodMonth" onclick="setSquadPeriod('month')">This Month</button>
+    </div>
+
+    <div class="squad-list" id="squadList"></div>
+
+    <div class="section-label" style="margin-top:24px;">How it works</div>
+    <p class="squad-explainer">Activity counts both days active and total workouts logged. Whoever has the least activity for the period gets a fun little dare — it changes each week, all in good fun, not a competition!</p>
   </div>
 
 </main>
@@ -1570,7 +1723,9 @@ function renderAll() {
     renderCalendar(entries);
     renderHistory(entries);
     renderDailyReminders();
+    renderLogSquadCallout();
     if (currentTab === 'weight') { renderWeight(); renderBodyComp(); renderMeasurements(); renderAllMetricsHistory(); }
+    if (currentTab === 'squad') renderSquad();
     } catch(e) { console.error('Render error:', e); }
 }
 
@@ -1767,12 +1922,150 @@ function switchTab(name) {
   currentTab = name;
   localStorage.setItem('fitness_tab', name);
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['log','calendar','history','weight'][i] === name);
+    t.classList.toggle('active', ['log','calendar','history','weight','squad'][i] === name);
   });
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'calendar') renderCalendar(entriesMap[currentPerson]);
   if (name === 'weight') { renderWeight(); renderBodyComp(); renderMeasurements(); renderAllMetricsHistory(); }
+  if (name === 'squad') renderSquad();
+}
+
+// ── SQUAD ──────────────────────────────────────────────────────────────────────
+let squadPeriod = 'week';
+
+const SQUAD_DARES = [
+  'owes everyone a round 🍻',
+  'picks the next family dinner spot 🍽️',
+  'has to plan the next workout for everyone 💪',
+  'owes everyone coffee ☕',
+  'has to post a workout selfie in the group chat 📸',
+  'has to make a motivational playlist for the squad 🎵',
+  'owes everyone dessert 🍰',
+  'has to do 20 burpees on video call next time 😅',
+  'picks the next movie night pick 🎬',
+  "has to come up with next week's squad challenge 🏆"
+];
+
+function pickDailyDare(seed) {
+  // deterministic-ish pick that changes by week/month so it's not random every render
+  const idx = Math.abs(seed) % SQUAD_DARES.length;
+  return SQUAD_DARES[idx];
+}
+
+function setSquadPeriod(period) {
+  squadPeriod = period;
+  document.getElementById('squadPeriodWeek').classList.toggle('active', period === 'week');
+  document.getElementById('squadPeriodMonth').classList.toggle('active', period === 'month');
+  renderSquad();
+}
+
+function getPeriodRange(period) {
+  const now = new Date();
+  if (period === 'week') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay());
+    start.setHours(0,0,0,0);
+    return { start, end: now };
+  } else {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { start, end: now };
+  }
+}
+
+function renderSquad() {
+  const { start } = getPeriodRange(squadPeriod);
+  const startStr = fmtDate(start);
+
+  const stats = Object.keys(PEOPLE).map(key => {
+    const entries = (entriesMap[key] || []).filter(e => e.date >= startStr);
+    const daysActive = new Set(entries.map(e => e.date)).size;
+    const totalWorkouts = entries.length;
+    return { key, name: PEOPLE[key].name, daysActive, totalWorkouts };
+  });
+
+  // sort by daysActive desc, then totalWorkouts desc
+  stats.sort((a, b) => b.daysActive - a.daysActive || b.totalWorkouts - a.totalWorkouts);
+
+  const list = document.getElementById('squadList');
+  const calloutEl = document.getElementById('squadCallout');
+
+  const allZero = stats.every(s => s.daysActive === 0 && s.totalWorkouts === 0);
+
+  if (allZero) {
+    calloutEl.innerHTML = `
+      <div class="squad-callout-icon">🌱</div>
+      <div class="squad-callout-title">No activity logged yet this ${squadPeriod}</div>
+      <div class="squad-callout-sub">Be the first to log a workout!</div>`;
+  } else {
+    const top = stats[0];
+    const last = stats[stats.length - 1];
+    const tie = top.daysActive === last.daysActive && top.totalWorkouts === last.totalWorkouts;
+
+    if (tie) {
+      calloutEl.innerHTML = `
+        <div class="squad-callout-icon">🤝</div>
+        <div class="squad-callout-title">Everyone's tied this ${squadPeriod}!</div>
+        <div class="squad-callout-sub">No dare this time — keep it up, squad.</div>`;
+    } else {
+      // seed the dare pick by the period start date so it's stable for everyone this week/month
+      const { start } = getPeriodRange(squadPeriod);
+      const seed = start.getFullYear() * 1000 + start.getMonth() * 31 + start.getDate();
+      const dare = pickDailyDare(seed);
+      calloutEl.innerHTML = `
+        <div class="squad-callout-icon">🎲</div>
+        <div class="squad-callout-title">${last.name} ${dare}</div>
+        <div class="squad-callout-sub">${top.name} is leading this ${squadPeriod} with ${top.daysActive} active day${top.daysActive === 1 ? '' : 's'}</div>`;
+    }
+  }
+
+  list.innerHTML = stats.map((s, i) => {
+    const p = PEOPLE[s.key];
+    const isTop = i === 0 && !allZero && s.daysActive > 0;
+    const isLast = i === stats.length - 1 && !allZero && stats.length > 1 && s.daysActive < stats[0].daysActive;
+    const badge = isTop ? '👑' : isLast ? '🎲' : '';
+    const cardClass = isTop ? 'is-top' : isLast ? 'is-last' : '';
+
+    return `
+      <div class="squad-card ${cardClass}">
+        <div class="squad-rank">${i + 1}</div>
+        <div class="squad-avatar" style="background:${p.accentGlow};color:${p.accent};">${p.initial}</div>
+        <div class="squad-info">
+          <div class="squad-name">${p.name}</div>
+          <div class="squad-stats">${s.daysActive} day${s.daysActive === 1 ? '' : 's'} active · ${s.totalWorkouts} workout${s.totalWorkouts === 1 ? '' : 's'} logged</div>
+        </div>
+        <div class="squad-badge">${badge}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── MINI SQUAD CALLOUT (Log tab) ───────────────────────────────────────────────
+function renderLogSquadCallout() {
+  const el = document.getElementById('logSquadCallout');
+  if (!el) return;
+
+  const { start } = getPeriodRange('week');
+  const startStr = fmtDate(start);
+
+  const stats = Object.keys(PEOPLE).map(key => {
+    const entries = (entriesMap[key] || []).filter(e => e.date >= startStr);
+    const daysActive = new Set(entries.map(e => e.date)).size;
+    return { key, name: PEOPLE[key].name, daysActive };
+  });
+
+  const allZero = stats.every(s => s.daysActive === 0);
+  if (allZero) { el.innerHTML = ''; return; }
+
+  stats.sort((a, b) => b.daysActive - a.daysActive);
+  const top = stats[0];
+  const last = stats[stats.length - 1];
+  const tie = top.daysActive === last.daysActive;
+
+  if (tie) {
+    el.innerHTML = `<span>🤝</span><span>Everyone's tied this week — tap to see the squad</span>`;
+  } else {
+    el.innerHTML = `<span>🎲</span><span><strong>${last.name}</strong> has a dare waiting this week — tap to see the squad</span>`;
+  }
 }
 
 
