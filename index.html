@@ -1194,6 +1194,7 @@
         <span class="weight-current-unit">kg</span>
       </div>
       <div class="weight-since" id="weightSince"></div>
+      <div class="weight-since" id="weightSinceLast"></div>
     </div>
 
     <div class="weight-form">
@@ -2441,6 +2442,7 @@ function renderWeight() {
   const entries = weightMap[currentPerson];
   const currentEl = document.getElementById('weightCurrentVal');
   const sinceEl   = document.getElementById('weightSince');
+  const sinceLastEl = document.getElementById('weightSinceLast');
 
   // Sunday reminder
   const today = new Date();
@@ -2453,13 +2455,14 @@ function renderWeight() {
   if (!entries.length) {
     currentEl.textContent = '—';
     sinceEl.textContent = '';
+    sinceLastEl.textContent = '';
     return;
   }
 
   const latest = entries[0];
   currentEl.textContent = displayWeight(latest.value);
 
-  // diff from first entry
+  // diff from first entry (all-time)
   const first = entries[entries.length - 1];
   if (entries.length > 1) {
     const diff = (latest.value - first.value).toFixed(1);
@@ -2467,6 +2470,16 @@ function renderWeight() {
     sinceEl.innerHTML = `<span>${sign}${diff} ${weightUnit}</span> since ${fmtDisplay(first.date)}`;
   } else {
     sinceEl.textContent = `Logged on ${fmtDisplay(latest.date)}`;
+  }
+
+  // diff from previous entry (most recent change)
+  if (entries.length > 1) {
+    const previous = entries[1];
+    const lastDiff = (latest.value - previous.value).toFixed(1);
+    const lastSign = lastDiff > 0 ? '+' : '';
+    sinceLastEl.innerHTML = `<span>${lastSign}${lastDiff} ${weightUnit}</span> since last entry (${fmtDisplay(previous.date)})`;
+  } else {
+    sinceLastEl.textContent = '';
   }
 }
 
